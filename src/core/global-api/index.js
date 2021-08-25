@@ -52,6 +52,8 @@ export function initGlobalAPI(Vue: GlobalAPI) {
     return obj;
   };
 
+  // 初始化 Vue.options 对象, 并扩展
+  // components/directive/filters => 储存 Vue 全局组件指令过滤器
   Vue.options = Object.create(null);
   ASSET_TYPES.forEach((type) => {
     Vue.options[type + "s"] = Object.create(null);
@@ -61,10 +63,15 @@ export function initGlobalAPI(Vue: GlobalAPI) {
   // components with in Weex's multi-instance scenarios.
   Vue.options._base = Vue;
 
+  // 注入 kep-alive 组件
   extend(Vue.options.components, builtInComponents);
 
+  // 注册 Vue.use 来注册插件
   initUse(Vue);
+  // 注册 Vue.mixin 实现混入
   initMixin(Vue);
+  // 注册 Vue.extend 基于传入的 options 返回一个组件的构造函数
   initExtend(Vue);
+  // 注册 Vue.directive Vue.component Vue.filter
   initAssetRegisters(Vue);
 }

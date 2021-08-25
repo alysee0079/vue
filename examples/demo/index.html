@@ -8,9 +8,20 @@
     <script src="../../dist/vue.js"></script>
   </head>
   <body>
-    <div id="app">{{a}}</div>
+    <div id="app">
+      <myc />
+    </div>
 
     <script>
+      Vue.component("my-component-name", {
+        template: "<div>123</div>",
+      });
+      Vue.options.components["myc"] = {
+        abstract: true,
+        render() {
+          return "1";
+        },
+      };
       new Vue({
         el: "#app",
         data() {
@@ -19,6 +30,7 @@
           };
         },
       });
+      console.dir(Vue);
     </script>
   </body>
 </html>
