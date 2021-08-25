@@ -5419,18 +5419,19 @@
 
   /*  */
 
-  function initGlobalAPI (Vue) {
+  // 添加静态方法, 属性
+  function initGlobalAPI(Vue) {
     // config
     var configDef = {};
     configDef.get = function () { return config; };
     {
       configDef.set = function () {
         warn(
-          'Do not replace the Vue.config object, set individual fields instead.'
+          "Do not replace the Vue.config object, set individual fields instead."
         );
       };
     }
-    Object.defineProperty(Vue, 'config', configDef);
+    Object.defineProperty(Vue, "config", configDef);
 
     // exposed util methods.
     // NOTE: these are not considered part of the public API - avoid relying on
@@ -5439,7 +5440,7 @@
       warn: warn,
       extend: extend,
       mergeOptions: mergeOptions,
-      defineReactive: defineReactive$$1
+      defineReactive: defineReactive$$1,
     };
 
     Vue.set = set;
@@ -5449,12 +5450,12 @@
     // 2.6 explicit observable API
     Vue.observable = function (obj) {
       observe(obj);
-      return obj
+      return obj;
     };
 
     Vue.options = Object.create(null);
     ASSET_TYPES.forEach(function (type) {
-      Vue.options[type + 's'] = Object.create(null);
+      Vue.options[type + "s"] = Object.create(null);
     });
 
     // this is used to identify the "base" constructor to extend all plain-object
@@ -7620,7 +7621,9 @@
     }
     var on = vnode.data.on || {};
     var oldOn = oldVnode.data.on || {};
-    target$1 = vnode.elm;
+    // vnode is empty when removing all listeners,
+    // and use old vnode dom element
+    target$1 = vnode.elm || oldVnode.elm;
     normalizeEvents(on);
     updateListeners(on, oldOn, add$1, remove$2, createOnceHandler$1, vnode.context);
     target$1 = undefined;
@@ -7628,7 +7631,8 @@
 
   var events = {
     create: updateDOMListeners,
-    update: updateDOMListeners
+    update: updateDOMListeners,
+    destroy: function (vnode) { return updateDOMListeners(vnode, emptyNode); }
   };
 
   /*  */
@@ -12012,3 +12016,4 @@
   return Vue;
 
 }));
+//# sourceMappingURL=vue.js.map
