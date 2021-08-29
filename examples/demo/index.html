@@ -9,28 +9,28 @@
   </head>
   <body>
     <div id="app">
-      <myc />
+      <!-- <h1>{{msg}}</h1>
+      {{msg}}
+      <hr />
+      {{count}} -->
+      <!-- {{arr}} -->
+      {{obj2.name}}
     </div>
 
     <script>
-      Vue.component("my-component-name", {
-        template: "<div>123</div>",
-      });
-      Vue.options.components["myc"] = {
-        abstract: true,
-        render() {
-          return "1";
-        },
-      };
-      new Vue({
+      const vue = new Vue({
         el: "#app",
         data() {
           return {
-            a: 1,
+            arr: [1, 2, 3],
+            obj: { a: 1 },
+            obj2: {},
           };
         },
+        mounted() {
+          this.obj2.name = "zs";
+        },
       });
-      console.dir(Vue);
     </script>
   </body>
 </html>

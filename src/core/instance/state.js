@@ -152,11 +152,11 @@ function initData(vm: Component) {
           vm
         );
     } else if (!isReserved(key)) {
-      //  data 中的数据注入到 vm (组件实例)
+      //  data 中的数据注入到 vm (组件实例), this.key => this._data.key
       proxy(vm, `_data`, key);
     }
   }
-  // observe data
+  // 将数据转换成响应式
   observe(data, true /* asRootData */);
 }
 
@@ -364,17 +364,21 @@ export function stateMixin(Vue: Class<Component>) {
   Vue.prototype.$delete = del;
 
   Vue.prototype.$watch = function (
-    expOrFn: string | Function,
+    expOrFn: string | Function, // 表达式或者函数
     cb: any,
     options?: Object
   ): Function {
+    // 获取实例
     const vm: Component = this;
     if (isPlainObject(cb)) {
       return createWatcher(vm, expOrFn, cb, options);
     }
     options = options || {};
+    // 标记为用户 watcher
     options.user = true;
+    // 创建用户 watcher 对象
     const watcher = new Watcher(vm, expOrFn, cb, options);
+    // 是否立即执行
     if (options.immediate) {
       const info = `callback for immediate watcher "${watcher.expression}"`;
       pushTarget();

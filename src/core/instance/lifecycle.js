@@ -150,6 +150,7 @@ export function mountComponent(
   hydrating?: boolean
 ): Component {
   vm.$el = el;
+  // 运行时版本如果有 template 给出警告不支持 template; 如果没有 render 函数给出警告
   if (!vm.$options.render) {
     vm.$options.render = createEmptyVNode;
     if (process.env.NODE_ENV !== "production") {

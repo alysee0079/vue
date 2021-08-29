@@ -35,11 +35,12 @@ extend(Vue.options.components, platformComponents);
 Vue.prototype.__patch__ = inBrowser ? patch : noop;
 
 // public mount method
-// 定义公共 $mount 方法
+// 定义公共 $mount 方法, 不区分平台
 Vue.prototype.$mount = function (
   el?: string | Element,
   hydrating?: boolean
 ): Component {
+  // 运行时也要获取 el
   el = el && inBrowser ? query(el) : undefined;
   return mountComponent(this, el, hydrating);
 };
