@@ -8,6 +8,7 @@ import { warn, nextTick, devtools, inBrowser, isIE } from "../util/index";
 
 export const MAX_UPDATE_COUNT = 100;
 
+// watcher 队列, 存放同一个事件周期的 watcher
 const queue: Array<Watcher> = [];
 const activatedChildren: Array<Component> = [];
 let has: { [key: number]: ?true } = {};
@@ -62,6 +63,7 @@ if (inBrowser && !isIE) {
 /**
  * Flush both queues and run the watchers.
  */
+// 触发 watcher 更新函数
 function flushSchedulerQueue() {
   currentFlushTimestamp = getNow();
   flushing = true;
@@ -156,6 +158,7 @@ function callActivatedHooks(queue) {
  * Jobs with duplicate IDs will be skipped unless it's
  * pushed when the queue is being flushed.
  */
+// 将 watcher 放入 watcher 队列
 export function queueWatcher(watcher: Watcher) {
   const id = watcher.id;
   // 当前处理的 watcher 储存到 has
@@ -175,6 +178,7 @@ export function queueWatcher(watcher: Watcher) {
       queue.splice(i + 1, 0, watcher);
     }
     // queue the flush
+    // waiting 是否在执行任务队列中, 只有上一次事件循环的任务队列执行完, 才允许执行添加下一次的事件循环
     if (!waiting) {
       waiting = true;
 

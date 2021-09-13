@@ -18,14 +18,14 @@ import {
   invokeWithErrorHandling,
 } from "../util/index";
 
-export let activeInstance: any = null;
+export let activeInstance: any = null; // 当前活动的 vm
 export let isUpdatingChildComponent: boolean = false;
 
 export function setActiveInstance(vm: Component) {
-  const prevActiveInstance = activeInstance;
+  const prevActiveInstance = activeInstance; // 储存上一次vm,即父vm
   activeInstance = vm;
   return () => {
-    activeInstance = prevActiveInstance;
+    activeInstance = prevActiveInstance; // 将当前 vm 重置为父 vm, 组件嵌套情况下
   };
 }
 
@@ -61,20 +61,18 @@ export function lifecycleMixin(Vue: Class<Component>) {
   Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
     const vm: Component = this;
     const prevEl = vm.$el;
-    const prevVnode = vm._vnode;
+    // prevVnode 旧 vode
+    const prevVnode = vm._vnode; // 缓存上一次的 vnode
     const restoreActiveInstance = setActiveInstance(vm);
     vm._vnode = vnode;
     // Vue.prototype.__patch__ is injected in entry points
     // based on the rendering backend used.
     if (!prevVnode) {
-      // initial render
-      // 首次渲染
+      // initial render 首次渲染
       // vm.$el：真实 DOM
       vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */);
     } else {
-      // updates
-      // 更新
-      // vm.$el：真实 DOM
+      // updates 数据更新
       vm.$el = vm.__patch__(prevVnode, vnode);
     }
     restoreActiveInstance();

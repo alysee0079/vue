@@ -72,6 +72,7 @@ export class Observer {
    * getter/setters. This method should only be called when
    * value type is Object.
    */
+  // 对象响应式处理
   walk(obj: Object) {
     const keys = Object.keys(obj);
     for (let i = 0; i < keys.length; i++) {
@@ -83,6 +84,7 @@ export class Observer {
   /**
    * Observe a list of Array items.
    */
+  // 数组响应式处理
   observeArray(items: Array<any>) {
     for (let i = 0, l = items.length; i < l; i++) {
       observe(items[i]);
@@ -176,6 +178,7 @@ export function defineReactive(
   Object.defineProperty(obj, key, {
     enumerable: true, // 可枚举
     configurable: true, // 可配置
+    // get 会在 mountComponent => new Watcher 时初始化, 调用 updateComponent
     get: function reactiveGetter() {
       // 获取要返回的属性值
       const value = getter ? getter.call(obj) : val;

@@ -45,10 +45,10 @@ export default class Watcher {
 
   constructor(
     vm: Component,
-    expOrFn: string | Function, // 更新函数或者表达式, 如果是渲染 watcher: updateComponent; 也有可能是 computed, watch
-    cb: Function,
-    options?: ?Object,
-    isRenderWatcher?: boolean // 是否是渲染 watcher
+    expOrFn: string | Function, // 更新函数或者表达式, 如果是渲染 watcher: updateComponent; computed 对应 get函数, watch 对应处理函数
+    cb: Function, // 回调函数, 例如 watch 的回调函数
+    options?: ?Object, // 配置对象, 在使用 watch 时用到
+    isRenderWatcher?: boolean // 是否是渲染 watcher, 只有组件更新时渲染函数
   ) {
     this.vm = vm;
     if (isRenderWatcher) {
@@ -58,8 +58,8 @@ export default class Watcher {
     vm._watchers.push(this);
     // options
     if (options) {
-      this.deep = !!options.deep;
-      this.user = !!options.user;
+      this.deep = !!options.deep; // watch 是否深度监听
+      this.user = !!options.user; // 在使用 watch 时标记是用户 watcher
       this.lazy = !!options.lazy; // 是否懒加载, 计算属性侦听器是懒加载, 渲染是立即加载
       this.sync = !!options.sync;
       this.before = options.before;
@@ -107,6 +107,7 @@ export default class Watcher {
     let value;
     const vm = this.vm;
     try {
+      // getter: updateComponent, watch: 获取属性, computed: computedGetter
       value = this.getter.call(vm, vm);
     } catch (e) {
       if (this.user) {
@@ -167,6 +168,7 @@ export default class Watcher {
    * Subscriber interface.
    * Will be called when a dependency changes.
    */
+  // 触发更新逻辑
   update() {
     /* istanbul ignore else */
     if (this.lazy) {

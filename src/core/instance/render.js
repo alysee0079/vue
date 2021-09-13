@@ -28,13 +28,13 @@ export function initRender(vm: Component) {
   // so that we get proper render context inside it.
   // args order: tag, data, children, normalizationType, alwaysNormalize
   // internal version is used by render functions compiled from templates
-  // 对模板编译生成的 render 进行渲染的方法
-  vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false);
 
+  // 对模板编译生成的 render 进行处理的方法, 返回 vnode
+  vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false);
   // normalization is always applied for the public version, used in
   // user-written render functions.
-  // 对于手写 render 函数进行渲染的方法
-  // h 函数, 返回 vnode
+
+  // 对于手写render 函数进行渲染的方法, 也是 h 函数, 返回 vnode
   vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true);
 
   // $attrs & $listeners are exposed for easier HOC creation.
@@ -96,7 +96,7 @@ export function renderMixin(Vue: Class<Component>) {
 
   Vue.prototype._render = function (): VNode {
     const vm: Component = this;
-    // render 模板渲染render, 渲染函数
+    // 模板生成的 render函数, 或者是自定义 render, 或者是 template 转换成的 render
     const { render, _parentVnode } = vm.$options;
 
     if (_parentVnode) {
@@ -109,6 +109,7 @@ export function renderMixin(Vue: Class<Component>) {
 
     // set parent vnode. this allows render functions to have access
     // to the data on the placeholder node.
+    // 占位符 vnode <组件名 />
     vm.$vnode = _parentVnode;
     // render self
     let vnode;
@@ -117,7 +118,8 @@ export function renderMixin(Vue: Class<Component>) {
       // separately from one another. Nested component's render fns are called
       // when parent component is patched.
       currentRenderingInstance = vm;
-      // vm.$createElement 既是 h 函数, 生成 vnode
+      // 调用 reder 方法, 生成 vnode
+      // vm.$createElement 既是 h 函数, 生成 渲染 vnode
       vnode = render.call(vm._renderProxy, vm.$createElement);
     } catch (e) {
       handleError(e, vm, `render`);
@@ -157,6 +159,7 @@ export function renderMixin(Vue: Class<Component>) {
       vnode = createEmptyVNode();
     }
     // set parent
+    // 渲染 vnode.parent 指向占位符 vnode
     vnode.parent = _parentVnode;
     return vnode;
   };

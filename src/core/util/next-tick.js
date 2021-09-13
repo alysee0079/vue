@@ -7,11 +7,11 @@ import { isIE, isIOS, isNative } from "./env";
 
 export let isUsingMicroTask = false;
 // 任务队列数组
-const callbacks = [];
-let pending = false;
+const callbacks = []; // [flushSchedulerQueue, flushSchedulerQueue, flushSchedulerQueue...]
+let pending = false; // 是否允许添加任务
 
+// 执行任务队列中的任务
 function flushCallbacks() {
-  // 标志处理结束
   pending = false;
   // 复制所有任务
   const copies = callbacks.slice(0);
@@ -19,7 +19,7 @@ function flushCallbacks() {
   callbacks.length = 0;
   for (let i = 0; i < copies.length; i++) {
     // 执行所有任务
-    copies[i]();
+    copies[i](); // 调用 flushSchedulerQueue
   }
 }
 
@@ -93,7 +93,7 @@ if (typeof Promise !== "undefined" && isNative(Promise)) {
 export function nextTick(cb?: Function, ctx?: Object) {
   // 如果没有提供回调且在支持 Promise 的环境中，则返回一个 Promise
   let _resolve;
-  // 把 cb 回调函数异常处理, 存入 callbacks 数组中
+  // 把 cb 回调函数异常处理, 存入 callbacks 数组中, 此时还是同步操作
   callbacks.push(() => {
     if (cb) {
       try {
@@ -105,10 +105,11 @@ export function nextTick(cb?: Function, ctx?: Object) {
       _resolve(ctx);
     }
   });
-  // 队列没有被处理时执行 timerFunc
+  // 异步队列是否已经添加到下一次的事件循环中, 只有没添加的时候进去时才主动添加
+  // 当下一次的事件循环完毕后, 将 pending 重置, 允许再次添加
   if (!pending) {
     pending = true;
-    timerFunc();
+    timerFunc(); // 将处理 callbacks 放入事件循环队列, 等待下一个 tick 执行任务队列
   }
   // $flow-disable-line
   if (!cb && typeof Promise !== "undefined") {

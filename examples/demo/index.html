@@ -14,7 +14,7 @@
       <hr />
       {{count}} -->
       <!-- {{arr}} -->
-      {{obj2.name}}
+      {{obj.a}}
     </div>
 
     <script>
@@ -22,13 +22,8 @@
         el: "#app",
         data() {
           return {
-            arr: [1, 2, 3],
             obj: { a: 1 },
-            obj2: {},
           };
-        },
-        mounted() {
-          this.obj2.name = "zs";
         },
       });
     </script>

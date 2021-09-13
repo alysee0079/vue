@@ -16,6 +16,7 @@ export function initExtend(Vue: GlobalAPI) {
   /**
    * Class inheritance
    */
+  // 继承 Vue
   Vue.extend = function (extendOptions: Object): Function {
     extendOptions = extendOptions || {};
     const Super = this; // Vue
@@ -31,10 +32,13 @@ export function initExtend(Vue: GlobalAPI) {
     }
 
     const Sub = function VueComponent(options) {
+      // 调用 Vue._init
       this._init(options);
     };
-    Sub.prototype = Object.create(Super.prototype); // 以 Vue 的原型创建对象
+    // 原型继承
+    Sub.prototype = Object.create(Super.prototype);
     Sub.prototype.constructor = Sub;
+
     Sub.cid = cid++;
     Sub.options = mergeOptions(Super.options, extendOptions);
     Sub["super"] = Super;

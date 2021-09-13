@@ -177,12 +177,13 @@ const computedWatcherOptions = { lazy: true };
 
 function initComputed(vm: Component, computed: Object) {
   // $flow-disable-line
+  // vm._computedWatchers 储存组件实例所有的 computed watcher
   const watchers = (vm._computedWatchers = Object.create(null));
   // computed properties are just getters during SSR
   const isSSR = isServerRendering();
 
   for (const key in computed) {
-    const userDef = computed[key];
+    const userDef = computed[key]; // get 函数
     const getter = typeof userDef === "function" ? userDef : userDef.get;
     if (process.env.NODE_ENV !== "production" && getter == null) {
       warn(`Getter is missing for computed property "${key}".`, vm);
@@ -190,6 +191,7 @@ function initComputed(vm: Component, computed: Object) {
 
     if (!isSSR) {
       // create internal watcher for the computed property.
+      // 初始化 key: computed watcher
       watchers[key] = new Watcher(
         vm,
         getter || noop,
@@ -202,6 +204,7 @@ function initComputed(vm: Component, computed: Object) {
     // component prototype. We only need to define computed properties defined
     // at instantiation here.
     if (!(key in vm)) {
+      // 将 computed 属性代理到 vm 上, 并添加 getter(computedGetter) 方法, 在 component 组件初始化时就执行了
       defineComputed(vm, key, userDef);
     } else if (process.env.NODE_ENV !== "production") {
       if (key in vm.$data) {
@@ -256,11 +259,14 @@ export function defineComputed(
 
 function createComputedGetter(key) {
   return function computedGetter() {
+    // 计算属性对应的 watcher
     const watcher = this._computedWatchers && this._computedWatchers[key];
     if (watcher) {
       if (watcher.dirty) {
+        // 获取值, 此时调用 getter 方法, 会访问依赖的变量
         watcher.evaluate();
       }
+      // 收集依赖, 如果是在页面渲染时访问计算属性, 则收集渲染 watcher 到当前依赖中
       if (Dep.target) {
         watcher.depend();
       }
@@ -364,11 +370,11 @@ export function stateMixin(Vue: Class<Component>) {
   Vue.prototype.$delete = del;
 
   Vue.prototype.$watch = function (
-    expOrFn: string | Function, // 表达式或者函数
+    expOrFn: string | Function, // 表达式或者函数, watch -> key
     cb: any,
     options?: Object
   ): Function {
-    // 获取实例
+    // 获取组件实例
     const vm: Component = this;
     if (isPlainObject(cb)) {
       return createWatcher(vm, expOrFn, cb, options);
