@@ -10,14 +10,14 @@ import {
 import { updateListeners } from "../vdom/helpers/index";
 
 export function initEvents(vm: Component) {
-  // _events 储存事件名称和处理函数, $on 注册的事件会储存到 _events
+  // _events 储存事件名称和处理函数, $on 注册的事件和父组件监听子组件的回调函数会储存到 _events
   vm._events = Object.create(null);
   vm._hasHookEvent = false;
   // init parent attached events
-  // 获取父组件附加的事件
+  // 获取父组件附加到子组件上的事件
   const listeners = vm.$options._parentListeners;
   if (listeners) {
-    // 将父组件附加的事件注册到当前组件上
+    // 将父组件附加的事件注册到当前组件的 _events 中
     updateComponentListeners(vm, listeners);
   }
 }

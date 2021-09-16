@@ -217,6 +217,7 @@ export function parse(
     shouldDecodeNewlinesForHref: options.shouldDecodeNewlinesForHref,
     shouldKeepComment: options.comments,
     outputSourceRange: options.outputSourceRange,
+    // 解析开始标签, 创建元素 ast 节点
     start(tag, attrs, unary, start, end) {
       // check namespace.
       // inherit parent ns if there is one
@@ -228,7 +229,8 @@ export function parse(
       if (isIE && ns === "svg") {
         attrs = guardIESVGBug(attrs);
       }
-
+      // 创建元素 ast
+      // createASTElement(标签名, 属性, 父级 ast)
       let element: ASTElement = createASTElement(tag, attrs, currentParent);
       if (ns) {
         element.ns = ns;
@@ -306,7 +308,7 @@ export function parse(
         closeElement(element);
       }
     },
-
+    // 解析结束标签
     end(tag, start, end) {
       const element = stack[stack.length - 1];
       // pop stack
@@ -317,7 +319,7 @@ export function parse(
       }
       closeElement(element);
     },
-
+    // 解析文本, 创建文本 ast 节点
     chars(text: string, start: number, end: number) {
       if (!currentParent) {
         if (process.env.NODE_ENV !== "production") {
@@ -396,6 +398,7 @@ export function parse(
         }
       }
     },
+    // 解析注释, 创建注释 ast 节点
     comment(text: string, start, end) {
       // adding anything as a sibling to the root node is forbidden
       // comments should still be allowed, but ignored
@@ -416,7 +419,7 @@ export function parse(
       }
     },
   });
-  return root;
+  return root; // ast 树
 }
 
 function processPre(el) {
