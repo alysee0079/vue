@@ -13,6 +13,7 @@ import { extend, mergeOptions, formatComponentName } from "../util/index";
 let uid = 0;
 
 export function initMixin(Vue: Class<Component>) {
+  // 初始化逻辑
   Vue.prototype._init = function (options?: Object) {
     const vm: Component = this;
     // a uid
@@ -50,19 +51,19 @@ export function initMixin(Vue: Class<Component>) {
     }
     // expose real self
     vm._self = vm;
-    // vm 的生命周期相关变量初始化
-    // $children/$parent/$root/$refs
+    // 初始化实例属性(内部, 外部)
+    // $children/$parent/$root/$refs, _watcher/_inactive/_directInactive/_isMounted/_isDestroyed/_isBeingDestroyed
     initLifecycle(vm);
-    // vm 的事件监听初始化, 父组件绑定在当前组件上的事件
+    //初始化事件 _events, 将父组件附加的事件注册到当前组件的 _events 中
     initEvents(vm);
     // vm 的编译 render 初始化
     // $slots/$scopedSlots/_c/$createElement/$attrs/$listeners
     initRender(vm);
     // beforeCreate 生命钩子的回调
     callHook(vm, "beforeCreate");
-    // 把 inject 的成员注入到 vm
+    // 把 inject 的成员注入到 vm, 先注册 inject, 方便 data/props 使用
     initInjections(vm); // resolve injections before data/props
-    // 初始化 vm 的 _props/methods/_data/computed/watch ,注入到 vm (组件实例, 并转换成响应式)
+    // 初始化 vm 的状态数据, _props/methods/_data/computed/watch ,注入到 vm (组件实例, 并转换成响应式)
     initState(vm);
     // 初始化 porvide
     initProvide(vm); // resolve provide after data/props

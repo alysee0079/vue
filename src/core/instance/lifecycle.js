@@ -31,7 +31,6 @@ export function setActiveInstance(vm: Component) {
 
 export function initLifecycle(vm: Component) {
   const options = vm.$options;
-
   // locate first non-abstract parent
   let parent = options.parent;
   if (parent && !options.abstract) {
@@ -40,13 +39,13 @@ export function initLifecycle(vm: Component) {
     }
     parent.$children.push(vm);
   }
-
+  // 外部用户使用的实例属性
   vm.$parent = parent;
-  vm.$root = parent ? parent.$root : vm;
-
+  vm.$root = parent ? parent.$root : vm; // 根 vue 实例
   vm.$children = [];
   vm.$refs = {};
 
+  // vue 内部使用的实例属性
   vm._watcher = null;
   vm._inactive = null;
   vm._directInactive = false;

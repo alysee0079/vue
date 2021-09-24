@@ -720,7 +720,7 @@ export function createPatchFunction(backend) {
         nodeOps.setTextContent(elm, "");
       }
     } else if (oldVnode.text !== vnode.text) {
-      // 新节点有文本节点, 直接将老节点的内容改为新的文本节点, 不管之前老节点有什么
+      // 新节点有文本节点, 且与老节点的文本节点不同, 直接将老节点的内容改为新的文本节点, 不管之前老节点有什么
       nodeOps.setTextContent(elm, vnode.text);
     }
     if (isDef(data)) {

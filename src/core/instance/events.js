@@ -17,7 +17,7 @@ export function initEvents(vm: Component) {
   // 获取父组件附加到子组件上的事件
   const listeners = vm.$options._parentListeners;
   if (listeners) {
-    // 将父组件附加的事件注册到当前组件的 _events 中
+    // 将父组件注册到子组件的事件的事件注册到子组件的 _events 中
     updateComponentListeners(vm, listeners);
   }
 }

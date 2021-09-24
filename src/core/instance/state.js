@@ -47,7 +47,9 @@ export function proxy(target: Object, sourceKey: string, key: string) {
 }
 
 export function initState(vm: Component) {
-  vm._watchers = [];
+  // 初始化数据的顺序: props => methods => data => computed => watch
+
+  vm._watchers = []; // 储存当前组件所有的 watcher 实例(渲染, computed, watch)
   const opts = vm.$options;
   if (opts.props) initProps(vm, opts.props); // props 数据转换成响应式， 注入到 vm (组件实例)
   if (opts.methods) initMethods(vm, opts.methods); // 判断方法名在 props 中是否重复
