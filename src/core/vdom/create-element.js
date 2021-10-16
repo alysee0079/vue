@@ -41,6 +41,7 @@ export function createElement(
   return _createElement(context, tag, data, children, normalizationType);
 }
 
+// 创建 vnode (标签，组件)
 export function _createElement(
   context: Component,
   tag?: string | Class<Component> | Function | Object,
@@ -113,7 +114,7 @@ export function _createElement(
           context
         );
       }
-      // 创建 vnode
+      // 创建标签 vnode
       vnode = new VNode(
         config.parsePlatformTagName(tag),
         data,
@@ -129,6 +130,7 @@ export function _createElement(
       // 创建组件 vnode
       vnode = createComponent(Ctor, data, context, children, tag);
     } else {
+      // 未知的标签，且不是保留字，创建一个文本 vnode
       // unknown or unlisted namespaced elements
       // check at runtime because it may get assigned a namespace when its
       // parent normalizes children

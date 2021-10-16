@@ -9,12 +9,12 @@
   </head>
   <body>
     <div id="app">
-      <!-- <h1>{{msg}}</h1>
-      {{msg}}
-      <hr />
-      {{count}} -->
-      <!-- {{arr}} -->
-      {{obj.a}}
+      <button @click="cl">btn</button>
+      <!-- <ul>
+        <li class="li-item" v-for="item in list" :key="item">{{ item }}</li>
+      </ul> -->
+      <input class="i1" key="i1" type="text" v-model="inp" v-if="visible" />
+      <input class="i2" key="i2" type="text" v-model="inp" v-else />
     </div>
 
     <script>
@@ -22,8 +22,16 @@
         el: "#app",
         data() {
           return {
-            obj: { a: 1 },
+            list: ["a", "b", "c", "d"],
+            visible: true,
+            inp: "",
           };
+        },
+        methods: {
+          cl() {
+            // this.list.splice(1, 0, "y");
+            this.visible = !this.visible;
+          },
         },
       });
     </script>

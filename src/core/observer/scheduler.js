@@ -63,7 +63,7 @@ if (inBrowser && !isIE) {
 /**
  * Flush both queues and run the watchers.
  */
-// 触发 watcher 更新函数
+// 触发所有 watcher 更新函数
 function flushSchedulerQueue() {
   currentFlushTimestamp = getNow();
   flushing = true;
@@ -161,16 +161,17 @@ function callActivatedHooks(queue) {
 // 将 watcher 放入 watcher 队列
 export function queueWatcher(watcher: Watcher) {
   const id = watcher.id;
-  // 当前处理的 watcher 储存到 has
+  // 当前处理的 watcher 储存到 has, 如果有重复的 watcher 是不会添加到队列中的
   if (has[id] == null) {
     has[id] = true;
-    // flushing 队列是否在处理中
+    // flushing 队列是否在处理中, 是否处于更新中, 只有非更新状态时(false)才允许插入新 watcher
     if (!flushing) {
       // 没有在处理才添加到队列最后
       queue.push(watcher);
     } else {
       // if already flushing, splice the watcher based on its id
       // if already past its id, it will be run next immediately.
+      // 如果在更新中插入 watcher, 按照最新 id 进行排序
       let i = queue.length - 1;
       while (i > index && queue[i].id > watcher.id) {
         i--;
@@ -179,6 +180,7 @@ export function queueWatcher(watcher: Watcher) {
     }
     // queue the flush
     // waiting 是否在执行任务队列中, 只有上一次事件循环的任务队列执行完, 才允许执行添加下一次的事件循环
+    // 每次事件循环都只会添加一个执行方法, 但是 queue 队列可以添加新的 watcher
     if (!waiting) {
       waiting = true;
 

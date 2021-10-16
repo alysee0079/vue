@@ -198,7 +198,7 @@ export function createPatchFunction(backend) {
         if (isDef(data)) {
           invokeCreateHooks(vnode, insertedVnodeQueue);
         }
-        // 将当前 vnode 对应的真实 dom 插入到父元素
+        // 将当前 vnode 对应的真实 dom 插入到父元素 (vnode 的子 vnode 也是在这个阶段插入到父 vnode 的 elm)
         insert(parentElm, vnode.elm, refElm);
       }
 
@@ -601,7 +601,7 @@ export function createPatchFunction(backend) {
     }
     // 当遍历结束时, 旧开始节点下标 > 旧结束节点下标, 说明旧节点便利完了, 但是新节点还没遍历完
     if (oldStartIdx > oldEndIdx) {
-      // 说明新节点比旧节点多, 把剩下的新节点插入到新结束节点之前
+      // 说明新节点比旧节点多, 把剩下的新节点插入到老节点之后
       refElm = isUndef(newCh[newEndIdx + 1]) ? null : newCh[newEndIdx + 1].elm;
       addVnodes(
         parentElm,
@@ -884,7 +884,7 @@ export function createPatchFunction(backend) {
       // empty mount (likely as component), create new root element
       // 创建组件但是并没有挂载时(组件初始化)
       isInitialPatch = true;
-      // 创建新的 vnode, 但不挂载
+      // 创建元素, 但不挂载
       createElm(vnode, insertedVnodeQueue);
     } else {
       // 是否是真实的 dom 元素, 初始化时 oldVnode 传入的是真实 dom #app
@@ -938,7 +938,7 @@ export function createPatchFunction(backend) {
           // extremely rare edge case: do not insert if old element is in a
           // leaving transition. Only happens when combining transition +
           // keep-alive + HOCs. (#4590)
-          oldElm._leaveCb ? null : parentElm,
+          oldElm._leaveCb ? null : parentElm, // 老 vnode 对应的父元素, 新 vnode 将会插入进去
           nodeOps.nextSibling(oldElm)
         );
 
