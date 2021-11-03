@@ -142,7 +142,7 @@ export function createPatchFunction(backend) {
     }
 
     vnode.isRootInsert = !nested; // for transition enter check
-    // 处理组件节点
+    // 处理组件节点(此时的vnode是占位符, 需要初始化内部的组件实例并挂载)
     if (createComponent(vnode, insertedVnodeQueue, parentElm, refElm)) {
       return;
     }
@@ -221,7 +221,7 @@ export function createPatchFunction(backend) {
     if (isDef(i)) {
       const isReactivated = isDef(vnode.componentInstance) && i.keepAlive;
       if (isDef((i = i.hook)) && isDef((i = i.init))) {
-        i(vnode, false /* hydrating */); // 初始化组件
+        i(vnode, false /* hydrating */); // 初始化组件(init)
       }
       // after calling the init hook, if the vnode is a child component
       // it should've created a child instance and mounted it. the child
