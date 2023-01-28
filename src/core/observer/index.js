@@ -173,7 +173,7 @@ export function defineReactive(
   if ((!getter || setter) && arguments.length === 2) {
     val = obj[key];
   }
-  // 如果是深度观察, 递归将对象子属性都转成 setter/getter, 返回子观察对象
+  // 如果属性的值也是对象, 递归将值的属性都转成 setter/getter, 返回子观察对象
   let childOb = !shallow && observe(val);
   Object.defineProperty(obj, key, {
     enumerable: true, // 可枚举

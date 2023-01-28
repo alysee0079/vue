@@ -265,7 +265,7 @@ function createComputedGetter(key) {
     const watcher = this._computedWatchers && this._computedWatchers[key];
     if (watcher) {
       if (watcher.dirty) {
-        // 获取值, 此时调用 getter 方法, 会访问依赖的变量
+        // 获取值, 此时调用 getter 方法获取最新值, 会访问依赖的变量
         watcher.evaluate();
       }
       // 收集依赖, 如果是在页面渲染时访问计算属性, 则收集渲染 watcher 到当前依赖中

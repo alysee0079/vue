@@ -45,7 +45,7 @@ export default class Watcher {
 
   constructor(
     vm: Component,
-    expOrFn: string | Function, // 更新函数或者表达式, 如果是渲染 watcher: updateComponent; computed 对应 get函数, watch 对应处理函数
+    expOrFn: string | Function, // 更新函数或者表达式, 如果是渲染 watcher: updateComponent; computed 对应 get函数, watch 对应监听目标(字符串, 函数)
     cb: Function, // 回调函数, 例如 watch 的回调函数
     options?: ?Object, // 配置对象, 在使用 watch 时用到
     isRenderWatcher?: boolean // 是否是渲染 watcher, 只有组件更新时渲染函数
@@ -95,7 +95,6 @@ export default class Watcher {
           );
       }
     }
-    // 当时计算属性 watcher 时, lazy = true, 默认不初始化 value
     this.value = this.lazy ? undefined : this.get();
   }
 
@@ -107,7 +106,7 @@ export default class Watcher {
     let value;
     const vm = this.vm;
     try {
-      // getter: updateComponent, watch: 获取属性, computed: computedGetter
+      // getter: updateComponent, watch: 获取属性, computed: 对应 get函数
       value = this.getter.call(vm, vm);
     } catch (e) {
       if (this.user) {
