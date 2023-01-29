@@ -60,7 +60,7 @@ export default class Watcher {
     if (options) {
       this.deep = !!options.deep; // watch 是否深度监听
       this.user = !!options.user; // 在使用 watch 时标记是用户 watcher
-      this.lazy = !!options.lazy; // 是否懒加载, 计算属性侦听器是懒加载, 渲染是立即加载
+      this.lazy = !!options.lazy; // 是否懒加载, 计算属性(true)
       this.sync = !!options.sync;
       this.before = options.before;
     } else {
@@ -77,7 +77,7 @@ export default class Watcher {
     this.expression =
       process.env.NODE_ENV !== "production" ? expOrFn.toString() : "";
     // parse expression for getter
-    // expOrFn 可能是函数或者字符串, updateComponent 既是函数
+    // expOrFn 可能是函数或者字符串, updateComponent 是函数
     if (typeof expOrFn === "function") {
       this.getter = expOrFn;
     } else {
@@ -95,7 +95,7 @@ export default class Watcher {
           );
       }
     }
-    this.value = this.lazy ? undefined : this.get();
+    this.value = this.lazy ? undefined : this.get(); // computed 不初始化, watch 初始化
   }
 
   /**
@@ -106,7 +106,7 @@ export default class Watcher {
     let value;
     const vm = this.vm;
     try {
-      // getter: updateComponent, watch: 获取属性, computed: 对应 get函数
+      // getter: updateComponent, watch: 获取属性, computed: 对应 get 函数
       value = this.getter.call(vm, vm);
     } catch (e) {
       if (this.user) {
@@ -170,11 +170,13 @@ export default class Watcher {
   // 触发更新逻辑
   update() {
     /* istanbul ignore else */
+    // computed
     if (this.lazy) {
       this.dirty = true;
     } else if (this.sync) {
       this.run();
     } else {
+      // 异步更新(updateComponent, watch)
       queueWatcher(this);
     }
   }
@@ -198,7 +200,7 @@ export default class Watcher {
         // set new value
         const oldValue = this.value;
         this.value = value;
-        // 是否是用户 watcher, 计算属性, 侦听器
+        // 是否是侦听器 watch
         if (this.user) {
           const info = `callback for watcher "${this.expression}"`;
           invokeWithErrorHandling(

@@ -44,6 +44,7 @@ const componentVNodeHooks = {
         vnode,
         activeInstance
       ));
+      // 挂载组件
       child.$mount(hydrating ? vnode.elm : undefined, hydrating);
     }
   },

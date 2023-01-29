@@ -19,7 +19,7 @@ const idToTemplate = cached((id) => {
 
 // 保留 $mount 方法
 const mount = Vue.prototype.$mount;
-// 重写 $mount 方法, 主要是与平台相关的处理 ($mount 在 Vue._init 调用)
+// 重写 $mount 方法, 主要是与平台相关的处理 ($mount 在 Vue._init 调用)(编译器+运行时版本)
 Vue.prototype.$mount = function (
   el?: string | Element,
   hydrating?: boolean

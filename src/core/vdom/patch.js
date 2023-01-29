@@ -449,6 +449,7 @@ export function createPatchFunction(backend) {
     }
   }
 
+  // 子节点 diff
   function updateChildren(
     parentElm,
     oldCh,
@@ -515,7 +516,7 @@ export function createPatchFunction(backend) {
           newCh,
           newEndIdx
         );
-        // 将旧开始节点移动到旧结束节点之后
+        // 将旧开始节点移动到所有未处理节点之后
         canMove &&
           nodeOps.insertBefore(
             parentElm,
@@ -535,20 +536,21 @@ export function createPatchFunction(backend) {
           newCh,
           newStartIdx
         );
-        // 将旧结束节点移动到旧结束开始节点之前
+        // 将旧结束节点移动到所有未处理节点之前
         canMove &&
           nodeOps.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm);
         // 对比更新完成后, 旧开始节点下标往左移动(往前移动), 新结束节点下标往右移动(往后移动)
         oldEndVnode = oldCh[--oldEndIdx];
         newStartVnode = newCh[++newStartIdx];
       } else {
+        // 四种方式都没匹配到, 使用新节点的 key 去匹配老节点
         if (isUndef(oldKeyToIdx))
           // 创建老节点 key:index 的对象组合
           oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx);
         idxInOld = isDef(newStartVnode.key) // 获取新开始节点的 key
-          ? oldKeyToIdx[newStartVnode.key] // 新开始节点的 key 在组合中找到对应的下标
+          ? oldKeyToIdx[newStartVnode.key] // 新开始节点的 key 在组合中找到对应的老节点的下标
           : findIdxInOld(newStartVnode, oldCh, oldStartIdx, oldEndIdx); // 如果没有 key, 则通过其他字段匹配
-        // 如果新开始节点没有匹配到对应老节点, 创建新元素并插入到所有老节点的最前面
+        // 如果新开始节点没有匹配到对应老节点下标, 创建新元素并插入到旧节点之前
         if (isUndef(idxInOld)) {
           // New element
           createElm(
@@ -574,7 +576,7 @@ export function createPatchFunction(backend) {
             );
             // 清空掉已经被匹配到的这个节点下标
             oldCh[idxInOld] = undefined;
-            // 将老节点移动到老的开始节点之前
+            // 将老节点移动到所有未处理节点之前
             canMove &&
               nodeOps.insertBefore(
                 parentElm,
@@ -583,7 +585,7 @@ export function createPatchFunction(backend) {
               );
           } else {
             // same key but different element. treat as new element
-            // 如果不是同元素不相同, 创建新元素并插入到老开始节点之前
+            // 如果不是同元素不相同, 创建新元素并插入到旧节点之前
             createElm(
               newStartVnode,
               insertedVnodeQueue,
@@ -599,7 +601,6 @@ export function createPatchFunction(backend) {
         newStartVnode = newCh[++newStartIdx];
       }
     }
-    // 当遍历结束时, 旧开始节点下标 > 旧结束节点下标, 说明旧节点便利完了, 但是新节点还没遍历完
     if (oldStartIdx > oldEndIdx) {
       // 说明新节点比旧节点多, 把剩下的新节点插入到老节点之后
       refElm = isUndef(newCh[newEndIdx + 1]) ? null : newCh[newEndIdx + 1].elm;
@@ -642,6 +643,7 @@ export function createPatchFunction(backend) {
     }
   }
 
+  // 打补丁(patch)
   function patchVnode(
     oldVnode,
     vnode,
@@ -674,6 +676,7 @@ export function createPatchFunction(backend) {
     // note we only do this if the vnode is cloned -
     // if the new node is not cloned it means the render functions have been
     // reset by the hot-reload-api and we need to do a proper re-render.
+    // 如果是静态节点, 不处理
     if (
       isTrue(vnode.isStatic) &&
       isTrue(oldVnode.isStatic) &&
@@ -690,6 +693,7 @@ export function createPatchFunction(backend) {
       i(oldVnode, vnode);
     }
 
+    // 获取新旧节点的子节点
     const oldCh = oldVnode.children;
     const ch = vnode.children;
     if (isDef(data) && isPatchable(vnode)) {
@@ -869,6 +873,7 @@ export function createPatchFunction(backend) {
     }
   }
 
+  // 新旧 vnode 打补丁
   return function patch(oldVnode, vnode, hydrating, removeOnly) {
     // 新 vnode 不存在
     if (isUndef(vnode)) {
@@ -879,7 +884,7 @@ export function createPatchFunction(backend) {
 
     let isInitialPatch = false;
     const insertedVnodeQueue = []; // 新插入 vnode 队列
-    // 老的 vnode 不存在
+    // 老的 vnode 不存在(初始化阶段)
     if (isUndef(oldVnode)) {
       // empty mount (likely as component), create new root element
       // 创建组件但是并没有挂载时(组件初始化)
@@ -887,6 +892,7 @@ export function createPatchFunction(backend) {
       // 创建元素, 但不挂载
       createElm(vnode, insertedVnodeQueue);
     } else {
+      // 更新阶段
       // 是否是真实的 dom 元素, 初始化时 oldVnode 传入的是真实 dom #app
       const isRealElement = isDef(oldVnode.nodeType);
       // 如果不是真实 dom, 并且新旧 vnode 相同(key, select选择器), 则进行 diff 算法对比

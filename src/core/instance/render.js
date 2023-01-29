@@ -96,7 +96,7 @@ export function renderMixin(Vue: Class<Component>) {
 
   Vue.prototype._render = function (): VNode {
     const vm: Component = this;
-    // 模板生成的 render函数, 或者是自定义 render, 或者是 template 转换成的 render
+    // 模板解析生成 render 函数, 或者是自定义 render 函数, 或者是 template 转换成的 render
     const { render, _parentVnode } = vm.$options;
 
     if (_parentVnode) {

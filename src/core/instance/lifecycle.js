@@ -171,10 +171,12 @@ export function mountComponent(
       }
     }
   }
+  // 生命周期钩子: beforeMount
   callHook(vm, "beforeMount");
 
   let updateComponent;
   /* istanbul ignore if */
+  // 创建更新组件函数
   if (process.env.NODE_ENV !== "production" && config.performance && mark) {
     updateComponent = () => {
       const name = vm._name;
@@ -194,6 +196,7 @@ export function mountComponent(
     };
   } else {
     updateComponent = () => {
+      // _update: 执行 path 方法, 新旧 vnode 打补丁
       vm._update(vm._render(), hydrating);
     };
   }
@@ -201,6 +204,7 @@ export function mountComponent(
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
+  // 创建组件 watcher, 初始化时会执行 updateComponent
   new Watcher(
     vm,
     updateComponent,
@@ -220,6 +224,7 @@ export function mountComponent(
   // mounted is called for render-created child components in its inserted hook
   if (vm.$vnode == null) {
     vm._isMounted = true;
+    // 生命周期钩子: mounted
     callHook(vm, "mounted");
   }
   return vm;

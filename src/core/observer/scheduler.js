@@ -111,6 +111,7 @@ function flushSchedulerQueue() {
   const activatedQueue = activatedChildren.slice();
   const updatedQueue = queue.slice();
 
+  // 任务执行完以后重置调度状态
   resetSchedulerState();
 
   // call component updated and activated hooks
@@ -179,15 +180,15 @@ export function queueWatcher(watcher: Watcher) {
       queue.splice(i + 1, 0, watcher);
     }
     // queue the flush
-    // waiting 是否在执行任务队列中, 只有上一次事件循环的任务队列执行完, 才允许执行添加下一次的事件循环
+    // waiting 是否在执行插入任务队列的操作, 只有上一次事件循环的任务队列执行完, 才允许执行添加下一次的事件循环
     // 每次事件循环都只会添加一个执行方法, 但是 queue 队列可以添加新的 watcher
     if (!waiting) {
       waiting = true;
 
-      if (process.env.NODE_ENV !== "production" && !config.async) {
-        flushSchedulerQueue();
-        return;
-      }
+      // if (process.env.NODE_ENV !== "production" && !config.async) {
+      //   flushSchedulerQueue();
+      //   return;
+      // }
       nextTick(flushSchedulerQueue);
     }
   }

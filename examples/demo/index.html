@@ -10,11 +10,7 @@
   <body>
     <div id="app">
       <button @click="cl">btn</button>
-      <!-- <ul>
-        <li class="li-item" v-for="item in list" :key="item">{{ item }}</li>
-      </ul> -->
-      <input class="i1" key="i1" type="text" v-model="inp" v-if="visible" />
-      <input class="i2" key="i2" type="text" v-model="inp" v-else />
+      <p>{{inp2}}</p>
     </div>
 
     <script>
@@ -22,15 +18,23 @@
         el: "#app",
         data() {
           return {
-            list: ["a", "b", "c", "d"],
-            visible: true,
-            inp: "",
+            inp: 1,
+            // inp2: 0
           };
         },
+        computed: {
+          inp2() {
+            return this.inp + 1;
+          },
+        },
+        // watch: {
+        //   inp() {
+        //     this.inp2 = this.inp2 + this.inp;
+        //   },
+        // },
         methods: {
           cl() {
-            // this.list.splice(1, 0, "y");
-            this.visible = !this.visible;
+            this.inp = this.inp + 1;
           },
         },
       });
