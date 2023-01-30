@@ -11,7 +11,11 @@ function Vue(options) {
   }
   this._init(options);
 }
-// 初始化 Vue 的实例成员, 与平台无关
+
+/**
+ * 初始化 Vue 的实例成员, 与平台无关
+ */
+
 // 注册 vm 的 _init 方法, 初始化 vm
 initMixin(Vue);
 // 注册 vm 的 $data/$props/$set/$delete/$watch

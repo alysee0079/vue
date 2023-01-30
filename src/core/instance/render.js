@@ -34,7 +34,7 @@ export function initRender(vm: Component) {
   // normalization is always applied for the public version, used in
   // user-written render functions.
 
-  // 对于手写render 函数进行渲染的方法, 也是 h 函数, 返回 vnode
+  // 对于手写 render 函数进行渲染的方法, 也是 h 函数, 返回 vnode
   vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true);
 
   // $attrs & $listeners are exposed for easier HOC creation.
@@ -62,6 +62,7 @@ export function initRender(vm: Component) {
       true
     );
   } else {
+    // 将 $attrs, $listeners 代理到组件实例上并转成响应式(浅响应)
     defineReactive(
       vm,
       "$attrs",

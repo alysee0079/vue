@@ -48,8 +48,8 @@ export function proxy(target: Object, sourceKey: string, key: string) {
 
 export function initState(vm: Component) {
   // 初始化数据的顺序: props => methods => data => computed => watch
-
-  vm._watchers = []; // 储存当前组件所有的 watcher 实例(渲染, computed, watch)
+  // 储存当前组件所有的 watcher 实例(渲染, computed, watch)
+  vm._watchers = [];
   const opts = vm.$options;
   if (opts.props) initProps(vm, opts.props); // props 数据转换成响应式， 注入到 vm (组件实例)
   if (opts.methods) initMethods(vm, opts.methods); // 判断方法名在 props 中是否重复
@@ -90,7 +90,7 @@ function initProps(vm: Component, propsOptions: Object) {
           vm
         );
       }
-      // 将 props 中的数据转换成响应式的
+      // 将 props 代理到组件实例上
       defineReactive(props, key, value, () => {
         if (!isRoot && !isUpdatingChildComponent) {
           warn(
@@ -103,13 +103,14 @@ function initProps(vm: Component, propsOptions: Object) {
         }
       });
     } else {
+      // 将 props 代理到组件实例上
       defineReactive(props, key, value);
     }
     // static props are already proxied on the component's prototype
     // during Vue.extend(). We only need to proxy props defined at
     // instantiation here.
 
-    // 将 props 中的数据注入到 vm 上
+    // 将 props 代理到 _props 上
     if (!(key in vm)) {
       proxy(vm, `_props`, key);
     }
@@ -198,7 +199,7 @@ function initComputed(vm: Component, computed: Object) {
         vm,
         getter || noop,
         noop,
-        computedWatcherOptions
+        computedWatcherOptions // { lazy: true }
       );
     }
 

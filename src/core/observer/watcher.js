@@ -117,6 +117,7 @@ export default class Watcher {
     } finally {
       // "touch" every property so they are all tracked as
       // dependencies for deep watching
+      // 触发每一个子属性, 以达到深度监听
       if (this.deep) {
         traverse(value);
       }
@@ -203,6 +204,7 @@ export default class Watcher {
         // 是否是侦听器 watch
         if (this.user) {
           const info = `callback for watcher "${this.expression}"`;
+          // 调用 watch 回调
           invokeWithErrorHandling(
             this.cb,
             this.vm,

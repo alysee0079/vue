@@ -65,6 +65,7 @@ if (inBrowser && !isIE) {
  */
 // 触发所有 watcher 更新函数
 function flushSchedulerQueue() {
+  // 更新触发任务时间点(标识: 一次事件循环的开始节点)
   currentFlushTimestamp = getNow();
   flushing = true;
   let watcher, id;

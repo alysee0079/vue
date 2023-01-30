@@ -14,10 +14,12 @@ export function initProvide(vm: Component) {
 export function initInjections(vm: Component) {
   const result = resolveInject(vm.$options.inject, vm);
   if (result) {
+    //禁止转换成响应式
     toggleObserving(false);
     Object.keys(result).forEach((key) => {
       /* istanbul ignore else */
       if (process.env.NODE_ENV !== "production") {
+        // 将 provide 的数据代理到组件实例上
         defineReactive(vm, key, result[key], () => {
           warn(
             `Avoid mutating an injected value directly since the changes will be ` +
@@ -27,7 +29,7 @@ export function initInjections(vm: Component) {
           );
         });
       } else {
-        // 将 inject 的数据注入到 vm
+        // 将 provide 的数据代理到组件实例上
         defineReactive(vm, key, result[key]);
       }
     });

@@ -59,15 +59,15 @@ export function initMixin(Vue: Class<Component>) {
     // vm 的编译 render 初始化
     // $slots/$scopedSlots/_c/$createElement/$attrs/$listeners
     initRender(vm);
-    // beforeCreate 生命钩子的回调
+    // 生命钩子
     callHook(vm, "beforeCreate");
-    // 把 inject 的成员注入到 vm, 先注册 inject, 方便 data/props 使用
+    // 把 inject 的成员注入到 vm, 并转成响应式, 先注册 inject, 方便 data/props 使用
     initInjections(vm); // resolve injections before data/props
     // 初始化 vm 的状态数据, _props/methods/_data/computed/watch ,注入到 vm (组件实例, 并转换成响应式)
     initState(vm);
     // 初始化 porvide
     initProvide(vm); // resolve provide after data/props
-    // created 生命钩子的回调
+    // 生命钩子
     callHook(vm, "created");
 
     /* istanbul ignore if */
