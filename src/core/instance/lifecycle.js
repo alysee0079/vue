@@ -67,11 +67,10 @@ export function lifecycleMixin(Vue: Class<Component>) {
     // Vue.prototype.__patch__ is injected in entry points
     // based on the rendering backend used.
     if (!prevVnode) {
-      // initial render 首次渲染
-      // vm.$el：真实 DOM
+      // 应用初始化或者组件初始化
       vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */);
     } else {
-      // updates 数据更新
+      // 组件更新(或者使用 Vue.component 创建组件, 此时 prevVnode 为空)
       vm.$el = vm.__patch__(prevVnode, vnode);
     }
     restoreActiveInstance();
@@ -216,7 +215,7 @@ export function mountComponent(
         }
       },
     },
-    true /* isRenderWatcher */
+    true /* isRenderWatcher 代表渲染 watcher */
   );
   hydrating = false;
 

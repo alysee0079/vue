@@ -51,6 +51,7 @@ export default class Watcher {
     isRenderWatcher?: boolean // 是否是渲染 watcher, 只有组件更新时渲染函数
   ) {
     this.vm = vm;
+    // 渲染 watcher(组件更新)
     if (isRenderWatcher) {
       vm._watcher = this;
     }

@@ -114,7 +114,7 @@ export function _createElement(
           context
         );
       }
-      // 创建标签 vnode
+      // 创建元素 vnode
       vnode = new VNode(
         config.parsePlatformTagName(tag),
         data,

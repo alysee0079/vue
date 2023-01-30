@@ -123,6 +123,7 @@ export function createPatchFunction(backend) {
 
   let creatingElmInVPre = 0;
 
+  // 递归创建真实 dom(子节点) 并插入到父元素
   function createElm(
     vnode,
     insertedVnodeQueue,
@@ -652,6 +653,7 @@ export function createPatchFunction(backend) {
     index,
     removeOnly
   ) {
+    // 新旧 vnode 一样, 退出 patch
     if (oldVnode === vnode) {
       return;
     }
@@ -660,7 +662,7 @@ export function createPatchFunction(backend) {
       // clone reused vnode
       vnode = ownerArray[index] = cloneVNode(vnode);
     }
-    // 获取老节点的父元素
+    // 获取旧节点的父元素
     const elm = (vnode.elm = oldVnode.elm);
 
     if (isTrue(oldVnode.isAsyncPlaceholder)) {
@@ -873,7 +875,7 @@ export function createPatchFunction(backend) {
     }
   }
 
-  // 新旧 vnode 打补丁
+  // 新旧 vnode 对比打补丁
   return function patch(oldVnode, vnode, hydrating, removeOnly) {
     // 新 vnode 不存在
     if (isUndef(vnode)) {
@@ -884,16 +886,16 @@ export function createPatchFunction(backend) {
 
     let isInitialPatch = false;
     const insertedVnodeQueue = []; // 新插入 vnode 队列
-    // 老的 vnode 不存在(初始化阶段)
+
+    // 当使用 Vue.component 创建组件时oldVnode 为空
     if (isUndef(oldVnode)) {
       // empty mount (likely as component), create new root element
       // 创建组件但是并没有挂载时(组件初始化)
       isInitialPatch = true;
-      // 创建元素, 但不挂载
+      // 递归创建元素(子元素), 但不挂载
       createElm(vnode, insertedVnodeQueue);
     } else {
-      // 更新阶段
-      // 是否是真实的 dom 元素, 初始化时 oldVnode 传入的是真实 dom #app
+      // 是否是真实的 dom 元素, 应用初始化时 oldVnode 传入的是真实 dom #app
       const isRealElement = isDef(oldVnode.nodeType);
       // 如果不是真实 dom, 并且新旧 vnode 相同(key, select选择器), 则进行 diff 算法对比
       if (!isRealElement && sameVnode(oldVnode, vnode)) {
@@ -901,8 +903,7 @@ export function createPatchFunction(backend) {
         // 更新操作, diff 算法
         patchVnode(oldVnode, vnode, insertedVnodeQueue, null, null, removeOnly);
       } else {
-        // 初始化
-        // oldVnode 传入的是真实 dom => #app
+        // 应用初始化 => oldVnode 传入的是真实 dom => #app
         if (isRealElement) {
           // mounting to a real element
           // check if this is server-rendered content and if we can perform
@@ -933,7 +934,7 @@ export function createPatchFunction(backend) {
 
         // replacing existing element
         const oldElm = oldVnode.elm;
-        // 老节点的父元素, 用于挂载元素
+        // 旧节点的父元素, 用于挂载元素
         const parentElm = nodeOps.parentNode(oldElm);
 
         // create new node
@@ -979,6 +980,7 @@ export function createPatchFunction(backend) {
         }
 
         // destroy old node
+        // 删除旧节点
         if (isDef(parentElm)) {
           // 删除老节点
           removeVnodes([oldVnode], 0, 0);
