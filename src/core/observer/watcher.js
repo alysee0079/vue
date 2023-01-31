@@ -47,7 +47,7 @@ export default class Watcher {
     vm: Component,
     expOrFn: string | Function, // 更新函数或者表达式, 如果是渲染 watcher: updateComponent; computed 对应 get函数, watch 对应监听目标(字符串, 函数)
     cb: Function, // 回调函数, 例如 watch 的回调函数
-    options?: ?Object, // 配置对象, 在使用 watch 时用到
+    options?: ?Object, // 配置对象, 在使用 watch 或者渲染组件时用到
     isRenderWatcher?: boolean // 是否是渲染 watcher, 只有组件更新时渲染函数
   ) {
     this.vm = vm;
@@ -63,7 +63,7 @@ export default class Watcher {
       this.user = !!options.user; // 在使用 watch 时标记是用户 watcher
       this.lazy = !!options.lazy; // 是否懒加载, 计算属性(true)
       this.sync = !!options.sync;
-      this.before = options.before;
+      this.before = options.before; // 渲染组件 beforeUpdate
     } else {
       this.deep = this.user = this.lazy = this.sync = false;
     }
@@ -71,10 +71,10 @@ export default class Watcher {
     this.id = ++uid; // uid for batching
     this.active = true;
     this.dirty = this.lazy; // for lazy watchers
-    this.deps = [];
-    this.newDeps = [];
-    this.depIds = new Set();
-    this.newDepIds = new Set();
+    this.deps = []; // 储存之前的 dep
+    this.newDeps = []; // 储存本次新增的 dep
+    this.depIds = new Set(); // 储存之前的 dep id
+    this.newDepIds = new Set(); // 储存本次新增的 dep id
     this.expression =
       process.env.NODE_ENV !== "production" ? expOrFn.toString() : "";
     // parse expression for getter
@@ -133,12 +133,12 @@ export default class Watcher {
    */
   addDep(dep: Dep) {
     const id = dep.id;
+    // 如果本次 dep id 列表没有当前的 dep, 才添加本次 dep 列表
     if (!this.newDepIds.has(id)) {
       this.newDepIds.add(id);
-      // watcher 中也添加 dep
       this.newDeps.push(dep);
+      // 如果储存 dep id列表没有当前的 dep, 才添加储存列表
       if (!this.depIds.has(id)) {
-        // 将当前 watcher 添加到 dep 中
         dep.addSub(this);
       }
     }
@@ -147,20 +147,26 @@ export default class Watcher {
   /**
    * Clean up for dependency collection.
    */
+  // 清理本次没有使用到的 dep 的 watcher
   cleanupDeps() {
     let i = this.deps.length;
     while (i--) {
       const dep = this.deps[i];
+      // 如果之前的 dep 中没有本次新增的 dep, 将其删除, 说明本次更新没有使用到
       if (!this.newDepIds.has(dep.id)) {
         dep.removeSub(this);
       }
     }
     let tmp = this.depIds;
+    // 更新 dep id 为最新的
     this.depIds = this.newDepIds;
+    // 清除最新的 dep id
     this.newDepIds = tmp;
     this.newDepIds.clear();
     tmp = this.deps;
+    // 更新 dep 为最新的
     this.deps = this.newDeps;
+    // 清除最新的 dep
     this.newDeps = tmp;
     this.newDeps.length = 0;
   }

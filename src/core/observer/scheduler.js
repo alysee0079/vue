@@ -85,7 +85,7 @@ function flushSchedulerQueue() {
   // 在处理 watcher 队列时, 可能有新的 watcher 添加进来
   for (index = 0; index < queue.length; index++) {
     watcher = queue[index];
-    // 触发 beforeUpdate
+    // 生命周期 beforeUpdate
     if (watcher.before) {
       watcher.before();
     }
@@ -117,6 +117,7 @@ function flushSchedulerQueue() {
 
   // call component updated and activated hooks
   callActivatedHooks(activatedQueue);
+  // 生命周期: updated
   callUpdatedHooks(updatedQueue);
 
   // devtool hook
@@ -127,6 +128,7 @@ function flushSchedulerQueue() {
 }
 
 function callUpdatedHooks(queue) {
+  // 从后向前执行 updated
   let i = queue.length;
   while (i--) {
     const watcher = queue[i];

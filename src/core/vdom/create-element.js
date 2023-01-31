@@ -125,8 +125,10 @@ export function _createElement(
       );
     } else if (
       (!data || !data.pre) &&
+      // Ctor: 注册组件的构造函数
       isDef((Ctor = resolveAsset(context.$options, "components", tag)))
     ) {
+      // 是注册的组件
       // 创建组件 vnode
       vnode = createComponent(Ctor, data, context, children, tag);
     } else {

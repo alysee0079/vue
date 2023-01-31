@@ -44,7 +44,7 @@ export class Observer {
 
   constructor(value: any) {
     this.value = value;
-    // 当前属性的依赖对象
+    // 当前对象的的依赖(watcher)
     this.dep = new Dep();
     // 初始化实例的 vmCount 为0
     this.vmCount = 0;
@@ -158,7 +158,7 @@ export function defineReactive(
   customSetter?: ?Function,
   shallow?: boolean // 是否递归观察对象
 ) {
-  // 依赖对象实例, 当前属性所依赖的 watcher
+  // 当前属性的依赖(watcher)
   const dep = new Dep();
   // 获取 obj.key 的属性描述符对象
   const property = Object.getOwnPropertyDescriptor(obj, key);
