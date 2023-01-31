@@ -96,7 +96,7 @@ const componentVNodeHooks = {
 
 const hooksToMerge = Object.keys(componentVNodeHooks);
 
-// 创建组件的占位符 vnode(注入钩子)
+// 创建组件的占位符 vnode, 在 patch 阶段使用 init 钩子初始化渲染组件实列, 并生成 DOM
 export function createComponent(
   Ctor: Class<Component> | Function | Object | void,
   data: ?VNodeData,
