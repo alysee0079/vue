@@ -27,6 +27,7 @@ import {
 } from "weex/runtime/recycle-list/render-component-template";
 
 // inline hooks to be invoked on component VNodes during patch
+// 组件钩子函数(在 patch 阶段会执行)
 const componentVNodeHooks = {
   // 组件挂载
   init(vnode: VNodeWithData, hydrating: boolean): ?boolean {
@@ -39,12 +40,12 @@ const componentVNodeHooks = {
       const mountedNode: any = vnode; // work around flow
       componentVNodeHooks.prepatch(mountedNode, mountedNode);
     } else {
-      // 创建子组件实例
+      // 创建渲染组件实例(和 new Vue 逻辑一致, 只不过属于 VueComponent 的实例)
       const child = (vnode.componentInstance = createComponentInstanceForVnode(
         vnode,
         activeInstance
       ));
-      // 挂载组件
+      // 生成 DOM 并储存到 vnode.elm, 如果有子组件, 会继续进行子组件的初始化
       child.$mount(hydrating ? vnode.elm : undefined, hydrating);
     }
   },
@@ -95,7 +96,7 @@ const componentVNodeHooks = {
 
 const hooksToMerge = Object.keys(componentVNodeHooks);
 
-// 创建组件的 vnode
+// 创建组件的占位符 vnode(注入钩子)
 export function createComponent(
   Ctor: Class<Component> | Function | Object | void,
   data: ?VNodeData,
@@ -107,10 +108,10 @@ export function createComponent(
     return;
   }
 
-  const baseCtor = context.$options._base; // Vue
+  const baseCtor = context.$options._base; // _base === Vue
 
   // plain options object: turn it into a constructor
-  // 如果 Ctor 不是构造函数是对象, 使用 Vue.extend 创造一个子组件的构造函数
+  // 1.如果 Ctor 是对象, 使用 Vue.extend 创造组件的构造函数(Vue 的子类)
   if (isObject(Ctor)) {
     Ctor = baseCtor.extend(Ctor);
   }
@@ -176,11 +177,12 @@ export function createComponent(
   }
 
   // install component management hooks onto the placeholder node
-  // 注入组件钩子函数
+  // 2.注入组件钩子函数(patch 阶段执行)
   installComponentHooks(data);
 
   // return a placeholder vnode
   const name = Ctor.options.name || tag;
+  // 3.创建占位符 vnode(没有 children)
   const vnode = new VNode(
     `vue-component-${Ctor.cid}${name ? `-${name}` : ""}`,
     data,
@@ -203,6 +205,7 @@ export function createComponent(
   return vnode;
 }
 
+// 创建渲染组件(渲染内容)实例
 export function createComponentInstanceForVnode(
   // we know it's MountedComponentVNode but flow doesn't
   vnode: any,
@@ -210,7 +213,7 @@ export function createComponentInstanceForVnode(
   parent: any
 ): Component {
   const options: InternalComponentOptions = {
-    _isComponent: true,
+    _isComponent: true, // 渲染内容
     _parentVnode: vnode,
     parent,
   };

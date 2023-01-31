@@ -160,7 +160,7 @@ export function renderMixin(Vue: Class<Component>) {
       vnode = createEmptyVNode();
     }
     // set parent
-    // 渲染 vnode.parent 指向占位符 vnode
+    // 渲染 vnode.parent 指向占位符 vnode(_parentVnode)
     vnode.parent = _parentVnode;
     return vnode;
   };

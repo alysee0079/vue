@@ -143,7 +143,7 @@ export function createPatchFunction(backend) {
     }
 
     vnode.isRootInsert = !nested; // for transition enter check
-    // 处理组件节点(此时的vnode是占位符, 需要初始化内部的组件实例并挂载)
+    // 初始化组件节点并挂载(此时是占位符 vnode, 需要初始化内部的组件实例并挂载)
     if (createComponent(vnode, insertedVnodeQueue, parentElm, refElm)) {
       return;
     }
@@ -218,11 +218,13 @@ export function createPatchFunction(backend) {
   }
 
   function createComponent(vnode, insertedVnodeQueue, parentElm, refElm) {
+    // 占位符 vnode 会被注入组件钩子: init, prepatch, insert, destroy
     let i = vnode.data;
     if (isDef(i)) {
       const isReactivated = isDef(vnode.componentInstance) && i.keepAlive;
       if (isDef((i = i.hook)) && isDef((i = i.init))) {
-        i(vnode, false /* hydrating */); // 初始化组件(init)
+        // 初始化渲染组件 vnode.componentInstance(init), 生成 DOM 挂载到 vnode.elm
+        i(vnode, false /* hydrating */);
       }
       // after calling the init hook, if the vnode is a child component
       // it should've created a child instance and mounted it. the child
@@ -231,7 +233,7 @@ export function createPatchFunction(backend) {
       if (isDef(vnode.componentInstance)) {
         // 调用组件钩子函数(初始化属性/事件/样式)
         initComponent(vnode, insertedVnodeQueue);
-        // 把组件对应的 DOM 插入到父元素中
+        // 把组件对应的 DOM 插入到父元素中(此时组件(组件的子组件) DOM 已经生成)
         insert(parentElm, vnode.elm, refElm);
         if (isTrue(isReactivated)) {
           reactivateComponent(vnode, insertedVnodeQueue, parentElm, refElm);
@@ -892,7 +894,7 @@ export function createPatchFunction(backend) {
       // empty mount (likely as component), create new root element
       // 创建组件但是并没有挂载时(组件初始化)
       isInitialPatch = true;
-      // 递归创建元素(子元素), 但不挂载
+      // 递归创建元素(子元素), 但不挂载到页面, DOM 储存到 vnode.elm
       createElm(vnode, insertedVnodeQueue);
     } else {
       // 是否是真实的 dom 元素, 应用初始化时 oldVnode 传入的是真实 dom #app

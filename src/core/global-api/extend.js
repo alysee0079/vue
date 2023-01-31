@@ -39,6 +39,7 @@ export function initExtend(Vue: GlobalAPI) {
     Sub.prototype = Object.create(Super.prototype);
     Sub.prototype.constructor = Sub;
 
+    // 组件 id
     Sub.cid = cid++;
     Sub.options = mergeOptions(Super.options, extendOptions);
     Sub["super"] = Super;
