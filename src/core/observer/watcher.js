@@ -60,7 +60,7 @@ export default class Watcher {
     // options
     if (options) {
       this.deep = !!options.deep; // watch 是否深度监听
-      this.user = !!options.user; // 在使用 watch 时标记是用户 watcher
+      this.user = !!options.user; // 用户 watcher
       this.lazy = !!options.lazy; // 是否懒加载, 计算属性(true)
       this.sync = !!options.sync;
       this.before = options.before; // 渲染组件 beforeUpdate

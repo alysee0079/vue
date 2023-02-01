@@ -229,6 +229,7 @@ export function mountComponent(
   return vm;
 }
 
+// 渲染组件更新
 export function updateChildComponent(
   vm: Component,
   propsData: ?Object,
@@ -280,6 +281,7 @@ export function updateChildComponent(
   vm.$listeners = listeners || emptyObject;
 
   // update props
+  // 更新 props
   if (propsData && vm.$options.props) {
     toggleObserving(false);
     const props = vm._props;

@@ -151,7 +151,7 @@ export function createPatchFunction(backend) {
     const data = vnode.data;
     const children = vnode.children;
     const tag = vnode.tag;
-    // html 标签节点
+    // 字符串标签节点
     if (isDef(tag)) {
       if (process.env.NODE_ENV !== "production") {
         if (data && data.pre) {
@@ -181,6 +181,7 @@ export function createPatchFunction(backend) {
         // with append="tree".
         const appendAsTree = isDef(data) && isTrue(data.appendAsTree);
         if (!appendAsTree) {
+          // 如果是组件占位符节点, 触发 create 钩子
           if (isDef(data)) {
             invokeCreateHooks(vnode, insertedVnodeQueue);
           }
@@ -196,6 +197,7 @@ export function createPatchFunction(backend) {
       } else {
         // 先递归子节点, 将子节点转换成真实 dom 节点并插入到父元素
         createChildren(vnode, children, insertedVnodeQueue);
+        // 如果是组件占位符节点, 触发 create 钩子
         if (isDef(data)) {
           invokeCreateHooks(vnode, insertedVnodeQueue);
         }
@@ -693,6 +695,7 @@ export function createPatchFunction(backend) {
 
     let i;
     const data = vnode.data;
+    // 更新组件(updateChildComponent)
     if (isDef(data) && isDef((i = data.hook)) && isDef((i = i.prepatch))) {
       i(oldVnode, vnode);
     }

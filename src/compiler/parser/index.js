@@ -82,7 +82,7 @@ export function parse(
   options: CompilerOptions
 ): ASTElement | void {
   warn = options.warn || baseWarn;
-  // 1. 解析 options
+  // 1.解析 options
   platformIsPreTag = options.isPreTag || no;
   platformMustUseProp = options.mustUseProp || no;
   platformGetTagNamespace = options.getTagNamespace || no;
@@ -208,7 +208,7 @@ export function parse(
       );
     }
   }
-  // 2. 解析模版
+  // 2.解析模版
   parseHTML(template, {
     warn,
     expectHTML: options.expectHTML,

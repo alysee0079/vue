@@ -5,12 +5,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <script src="../../dist/vue.js"></script>
+    <!-- <script src="../../dist/vue.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
   </head>
   <body>
     <div id="app">
       <button @click="cl">btn</button>
-      <p>{{inp2}}</p>
+      <p>{{inp1}}</p>
     </div>
 
     <script>
@@ -18,20 +19,9 @@
         el: "#app",
         data() {
           return {
-            inp: 1,
-            // inp2: 0
+            inp1: 1,
           };
         },
-        computed: {
-          inp2() {
-            return this.inp + 1;
-          },
-        },
-        // watch: {
-        //   inp() {
-        //     this.inp2 = this.inp2 + this.inp;
-        //   },
-        // },
         methods: {
           cl() {
             this.inp = this.inp + 1;

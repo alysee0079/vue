@@ -259,8 +259,10 @@ function def (obj, key, val, enumerable) {
  */
 
 // Regular Expressions for parsing tags and attributes
-var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
-var dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+?\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
+var attribute =
+  /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
+var dynamicArgAttribute =
+  /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+?\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
 var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z" + (unicodeRegExp.source) + "]*";
 var qnameCapture = "((?:" + ncname + "\\:)?" + ncname + ")";
 var startTagOpen = new RegExp(("^<" + qnameCapture));
@@ -272,63 +274,76 @@ var comment = /^<!\--/;
 var conditionalComment = /^<!\[/;
 
 // Special Elements (can contain anything)
-var isPlainTextElement = makeMap('script,style,textarea', true);
+var isPlainTextElement = makeMap("script,style,textarea", true);
 var reCache = {};
 
 var decodingMap = {
-  '&lt;': '<',
-  '&gt;': '>',
-  '&quot;': '"',
-  '&amp;': '&',
-  '&#10;': '\n',
-  '&#9;': '\t',
-  '&#39;': "'"
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&amp;": "&",
+  "&#10;": "\n",
+  "&#9;": "\t",
+  "&#39;": "'",
 };
 var encodedAttr = /&(?:lt|gt|quot|amp|#39);/g;
 var encodedAttrWithNewLines = /&(?:lt|gt|quot|amp|#39|#10|#9);/g;
 
 // #5992
-var isIgnoreNewlineTag = makeMap('pre,textarea', true);
-var shouldIgnoreFirstNewline = function (tag, html) { return tag && isIgnoreNewlineTag(tag) && html[0] === '\n'; };
+var isIgnoreNewlineTag = makeMap("pre,textarea", true);
+var shouldIgnoreFirstNewline = function (tag, html) { return tag && isIgnoreNewlineTag(tag) && html[0] === "\n"; };
 
-function decodeAttr (value, shouldDecodeNewlines) {
+function decodeAttr(value, shouldDecodeNewlines) {
   var re = shouldDecodeNewlines ? encodedAttrWithNewLines : encodedAttr;
-  return value.replace(re, function (match) { return decodingMap[match]; })
+  return value.replace(re, function (match) { return decodingMap[match]; });
 }
 
-function parseHTML (html, options) {
-  var stack = [];
+function parseHTML(html, options) {
+  var stack = []; // DOM 栈
   var expectHTML = options.expectHTML;
   var isUnaryTag$$1 = options.isUnaryTag || no;
   var canBeLeftOpenTag$$1 = options.canBeLeftOpenTag || no;
   var index = 0;
-  var last, lastTag;
+  var last, lastTag; // 上次文本, 上次标签
   while (html) {
     last = html;
     // Make sure we're not in a plaintext content element like script/style
+    // 非结束标签, 非纯内容元素(script, style, textrea)
     if (!lastTag || !isPlainTextElement(lastTag)) {
-      var textEnd = html.indexOf('<');
+      var textEnd = html.indexOf("<");
+      // < 号在 0 的位置, 说明是开始标签
       if (textEnd === 0) {
         // Comment:
+        // 注释节点
         if (comment.test(html)) {
-          var commentEnd = html.indexOf('-->');
+          var commentEnd = html.indexOf("-->");
 
           if (commentEnd >= 0) {
             if (options.shouldKeepComment) {
-              options.comment(html.substring(4, commentEnd), index, index + commentEnd + 3);
+              options.comment(
+                html.substring(4, commentEnd),
+                index,
+                index + commentEnd + 3
+              );
             }
+            // function advance(n) {
+            //   index += n;
+            //   html = html.substring(n);
+            // }
+            // 当前下标 ++, 截取剩余的 html
             advance(commentEnd + 3);
-            continue
+            continue;
           }
         }
 
         // http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
+        // 条件注释节点
         if (conditionalComment.test(html)) {
-          var conditionalEnd = html.indexOf(']>');
+          var conditionalEnd = html.indexOf("]>");
 
           if (conditionalEnd >= 0) {
             advance(conditionalEnd + 2);
-            continue
+            continue;
           }
         }
 
@@ -336,7 +351,7 @@ function parseHTML (html, options) {
         var doctypeMatch = html.match(doctype);
         if (doctypeMatch) {
           advance(doctypeMatch[0].length);
-          continue
+          continue;
         }
 
         // End tag:
@@ -344,23 +359,34 @@ function parseHTML (html, options) {
         if (endTagMatch) {
           var curIndex = index;
           advance(endTagMatch[0].length);
+          // 处理结束标签
           parseEndTag(endTagMatch[1], curIndex, index);
-          continue
+          continue;
         }
 
         // Start tag:
+        // const startTagMatch = {
+        //   tagName: start[1], // 标签名
+        //   attrs: [],         // 属性
+        //   start: index,      // 开始位置
+        //   end: index         // 结束位置
+        // }
         var startTagMatch = parseStartTag();
         if (startTagMatch) {
+          // 处理开始标签
           handleStartTag(startTagMatch);
           if (shouldIgnoreFirstNewline(startTagMatch.tagName, html)) {
             advance(1);
           }
-          continue
+          continue;
         }
       }
 
       var text = (void 0), rest = (void 0), next = (void 0);
+      // 处理文本节点
+      // 如果 < 号的位置大于0, 说明是结束标签
       if (textEnd >= 0) {
+        // 截取结束标签
         rest = html.slice(textEnd);
         while (
           !endTag.test(rest) &&
@@ -369,14 +395,16 @@ function parseHTML (html, options) {
           !conditionalComment.test(rest)
         ) {
           // < in plain text, be forgiving and treat it as text
-          next = rest.indexOf('<', 1);
-          if (next < 0) { break }
+          // 如果文本中也包含 < 号, 尝试找下一个 < 号的位置
+          next = rest.indexOf("<", 1);
+          if (next < 0) { break; }
           textEnd += next;
           rest = html.slice(textEnd);
         }
+        // 截取除结束标签外的文本
         text = html.substring(0, textEnd);
       }
-
+      // 没有 < 号, 说明是纯文本内容
       if (textEnd < 0) {
         text = html;
       }
@@ -386,18 +414,24 @@ function parseHTML (html, options) {
       }
 
       if (options.chars && text) {
+        // 生成文本 ast
         options.chars(text, index - text.length, index);
       }
     } else {
       var endTagLength = 0;
       var stackedTag = lastTag.toLowerCase();
-      var reStackedTag = reCache[stackedTag] || (reCache[stackedTag] = new RegExp('([\\s\\S]*?)(</' + stackedTag + '[^>]*>)', 'i'));
+      var reStackedTag =
+        reCache[stackedTag] ||
+        (reCache[stackedTag] = new RegExp(
+          "([\\s\\S]*?)(</" + stackedTag + "[^>]*>)",
+          "i"
+        ));
       var rest$1 = html.replace(reStackedTag, function (all, text, endTag) {
         endTagLength = endTag.length;
-        if (!isPlainTextElement(stackedTag) && stackedTag !== 'noscript') {
+        if (!isPlainTextElement(stackedTag) && stackedTag !== "noscript") {
           text = text
-            .replace(/<!\--([\s\S]*?)-->/g, '$1') // #7298
-            .replace(/<!\[CDATA\[([\s\S]*?)]]>/g, '$1');
+            .replace(/<!\--([\s\S]*?)-->/g, "$1") // #7298
+            .replace(/<!\[CDATA\[([\s\S]*?)]]>/g, "$1");
         }
         if (shouldIgnoreFirstNewline(stackedTag, text)) {
           text = text.slice(1);
@@ -405,7 +439,7 @@ function parseHTML (html, options) {
         if (options.chars) {
           options.chars(text);
         }
-        return ''
+        return "";
       });
       index += html.length - rest$1.length;
       html = rest$1;
@@ -414,32 +448,41 @@ function parseHTML (html, options) {
 
     if (html === last) {
       options.chars && options.chars(html);
-      if (process.env.NODE_ENV !== 'production' && !stack.length && options.warn) {
-        options.warn(("Mal-formatted tag at end of template: \"" + html + "\""), { start: index + html.length });
+      if (
+        process.env.NODE_ENV !== "production" &&
+        !stack.length &&
+        options.warn
+      ) {
+        options.warn(("Mal-formatted tag at end of template: \"" + html + "\""), {
+          start: index + html.length,
+        });
       }
-      break
+      break;
     }
   }
 
   // Clean up any remaining tags
   parseEndTag();
 
-  function advance (n) {
+  function advance(n) {
     index += n;
     html = html.substring(n);
   }
 
-  function parseStartTag () {
+  function parseStartTag() {
     var start = html.match(startTagOpen);
     if (start) {
       var match = {
         tagName: start[1],
         attrs: [],
-        start: index
+        start: index,
       };
       advance(start[0].length);
       var end, attr;
-      while (!(end = html.match(startTagClose)) && (attr = html.match(dynamicArgAttribute) || html.match(attribute))) {
+      while (
+        !(end = html.match(startTagClose)) &&
+        (attr = html.match(dynamicArgAttribute) || html.match(attribute))
+      ) {
         attr.start = index;
         advance(attr[0].length);
         attr.end = index;
@@ -449,55 +492,64 @@ function parseHTML (html, options) {
         match.unarySlash = end[1];
         advance(end[0].length);
         match.end = index;
-        return match
+        return match;
       }
     }
   }
 
-  function handleStartTag (match) {
+  function handleStartTag(match) {
     var tagName = match.tagName;
     var unarySlash = match.unarySlash;
 
     if (expectHTML) {
-      if (lastTag === 'p' && isNonPhrasingTag(tagName)) {
+      if (lastTag === "p" && isNonPhrasingTag(tagName)) {
         parseEndTag(lastTag);
       }
       if (canBeLeftOpenTag$$1(tagName) && lastTag === tagName) {
         parseEndTag(tagName);
       }
     }
-
+    // isUnaryTag 自闭合元素
     var unary = isUnaryTag$$1(tagName) || !!unarySlash;
 
     var l = match.attrs.length;
     var attrs = new Array(l);
+    // 处理属性, 转成 [{name: value}, {name: value}, {name: value}...]
     for (var i = 0; i < l; i++) {
       var args = match.attrs[i];
-      var value = args[3] || args[4] || args[5] || '';
-      var shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
-        ? options.shouldDecodeNewlinesForHref
-        : options.shouldDecodeNewlines;
+      var value = args[3] || args[4] || args[5] || "";
+      var shouldDecodeNewlines =
+        tagName === "a" && args[1] === "href"
+          ? options.shouldDecodeNewlinesForHref
+          : options.shouldDecodeNewlines;
       attrs[i] = {
         name: args[1],
-        value: decodeAttr(value, shouldDecodeNewlines)
+        value: decodeAttr(value, shouldDecodeNewlines),
       };
-      if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
+      if (process.env.NODE_ENV !== "production" && options.outputSourceRange) {
         attrs[i].start = args.start + args[0].match(/^\s*/).length;
         attrs[i].end = args.end;
       }
     }
-
+    // 非自闭合元素
     if (!unary) {
-      stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs, start: match.start, end: match.end });
-      lastTag = tagName;
+      stack.push({
+        tag: tagName,
+        lowerCasedTag: tagName.toLowerCase(),
+        attrs: attrs,
+        start: match.start,
+        end: match.end,
+      });
+      lastTag = tagName; // 将当前元素标签名复制给 lastTag, 上一次元素标签
     }
 
     if (options.start) {
+      // 创建开始标签 ast
       options.start(tagName, attrs, unary, match.start, match.end);
     }
   }
 
-  function parseEndTag (tagName, start, end) {
+  function parseEndTag(tagName, start, end) {
     var pos, lowerCasedTagName;
     if (start == null) { start = index; }
     if (end == null) { end = index; }
@@ -507,7 +559,7 @@ function parseHTML (html, options) {
       lowerCasedTagName = tagName.toLowerCase();
       for (pos = stack.length - 1; pos >= 0; pos--) {
         if (stack[pos].lowerCasedTag === lowerCasedTagName) {
-          break
+          break;
         }
       }
     } else {
@@ -518,14 +570,15 @@ function parseHTML (html, options) {
     if (pos >= 0) {
       // Close all the open elements, up the stack
       for (var i = stack.length - 1; i >= pos; i--) {
-        if (process.env.NODE_ENV !== 'production' &&
+        if (
+          process.env.NODE_ENV !== "production" &&
           (i > pos || !tagName) &&
           options.warn
         ) {
-          options.warn(
-            ("tag <" + (stack[i].tag) + "> has no matching end tag."),
-            { start: stack[i].start, end: stack[i].end }
-          );
+          options.warn(("tag <" + (stack[i].tag) + "> has no matching end tag."), {
+            start: stack[i].start,
+            end: stack[i].end,
+          });
         }
         if (options.end) {
           options.end(stack[i].tag, start, end);
@@ -535,11 +588,11 @@ function parseHTML (html, options) {
       // Remove the open elements from the stack
       stack.length = pos;
       lastTag = pos && stack[pos - 1].tag;
-    } else if (lowerCasedTagName === 'br') {
+    } else if (lowerCasedTagName === "br") {
       if (options.start) {
         options.start(tagName, [], true, start, end);
       }
-    } else if (lowerCasedTagName === 'p') {
+    } else if (lowerCasedTagName === "p") {
       if (options.start) {
         options.start(tagName, [], false, start, end);
       }
@@ -991,12 +1044,13 @@ var uid = 0;
  * A dep is an observable that can have multiple
  * directives subscribing to it.
  */
-var Dep = function Dep () {
+var Dep = function Dep() {
   this.id = uid++;
-  this.subs = [];
+  this.subs = []; // 储存所有的依赖对象(watcher)
 };
 
 Dep.prototype.addSub = function addSub (sub) {
+  // 将依赖对象(watcher)添加到依赖数组
   this.subs.push(sub);
 };
 
@@ -1006,6 +1060,7 @@ Dep.prototype.removeSub = function removeSub (sub) {
 
 Dep.prototype.depend = function depend () {
   if (Dep.target) {
+    // watcher.addDep
     Dep.target.addDep(this);
   }
 };
@@ -1013,7 +1068,7 @@ Dep.prototype.depend = function depend () {
 Dep.prototype.notify = function notify () {
   // stabilize the subscriber list first
   var subs = this.subs.slice();
-  if (process.env.NODE_ENV !== 'production' && !config.async) {
+  if (process.env.NODE_ENV !== "production" && !config.async) {
     // subs aren't sorted in scheduler if not running async
     // we need to sort them now to make sure they fire in correct
     // order
@@ -1027,6 +1082,8 @@ Dep.prototype.notify = function notify () {
 // The current target watcher being evaluated.
 // This is globally unique because only one watcher
 // can be evaluated at a time.
+// Dep.target 用来存放目前正在使用的 watcher
+// 全局唯一, 并且一次也只能有一个 watcher 被使用
 Dep.target = null;
 
 /*  */
@@ -1082,44 +1139,51 @@ Object.defineProperties( VNode.prototype, prototypeAccessors );
  */
 
 var arrayProto = Array.prototype;
+// 继承数组的原型
 var arrayMethods = Object.create(arrayProto);
 
+// 一下方法都可以直接修改数组元素, 改变数组长度或位置
 var methodsToPatch = [
-  'push',
-  'pop',
-  'shift',
-  'unshift',
-  'splice',
-  'sort',
-  'reverse'
-];
+  "push",
+  "pop",
+  "shift",
+  "unshift",
+  "splice",
+  "sort",
+  "reverse" ];
 
 /**
  * Intercept mutating methods and emit events
  */
 methodsToPatch.forEach(function (method) {
   // cache original method
+  // 保存数组原始方法
   var original = arrayProto[method];
-  def(arrayMethods, method, function mutator () {
+  // 调用 defineProperty 重新定义数组的方法
+  def(arrayMethods, method, function mutator() {
     var args = [], len = arguments.length;
     while ( len-- ) args[ len ] = arguments[ len ];
 
     var result = original.apply(this, args);
+    // 获取数组对象的 ob 对象(观察对象)
+    // this 指代当前数组, new Observer 时, 已将 Observer 实例挂载到了 this.__ob__ 上
     var ob = this.__ob__;
     var inserted;
     switch (method) {
-      case 'push':
-      case 'unshift':
+      case "push":
+      case "unshift":
         inserted = args;
-        break
-      case 'splice':
+        break;
+      case "splice":
         inserted = args.slice(2);
-        break
+        break;
     }
+    // 如果是新增的元素, 对元素做响应式处理
     if (inserted) { ob.observeArray(inserted); }
     // notify change
+    // 触发当前属性对应的依赖更新
     ob.dep.notify();
-    return result
+    return result;
   });
 });
 
@@ -1139,19 +1203,27 @@ var shouldObserve = true;
  * object's property keys into getter/setters that
  * collect dependencies and dispatch updates.
  */
-var Observer = function Observer (value) {
+var Observer = function Observer(value) {
   this.value = value;
+  // 当前对象的的依赖(watcher)
   this.dep = new Dep();
+  // 初始化实例的 vmCount 为0
   this.vmCount = 0;
-  def(value, '__ob__', this);
+  // 将实例挂载到观察对象的 __ob__ 属性, 此属性不会被枚举(enumerable: false)
+  def(value, "__ob__", this);
+  // 数组的响应式处理
   if (Array.isArray(value)) {
+    // 为数组添加拦截器, 添加新元素时转换成响应式, 更改数组内容时触发更新
     if (hasProto) {
+      // 是否支持 __poro__ 原型对象
       protoAugment(value, arrayMethods);
     } else {
       copyAugment(value, arrayMethods, arrayKeys);
     }
+    // 将数组中的对象转成响应式
     this.observeArray(value);
   } else {
+    // 遍历对象的属性, 转成 setter/getter
     this.walk(value);
   }
 };
@@ -1161,9 +1233,11 @@ var Observer = function Observer (value) {
  * getter/setters. This method should only be called when
  * value type is Object.
  */
+// 对象响应式处理
 Observer.prototype.walk = function walk (obj) {
   var keys = Object.keys(obj);
   for (var i = 0; i < keys.length; i++) {
+    // 对每一个属性进行响应式定义
     defineReactive$$1(obj, keys[i]);
   }
 };
@@ -1171,6 +1245,7 @@ Observer.prototype.walk = function walk (obj) {
 /**
  * Observe a list of Array items.
  */
+// 数组响应式处理
 Observer.prototype.observeArray = function observeArray (items) {
   for (var i = 0, l = items.length; i < l; i++) {
     observe(items[i]);
@@ -1183,8 +1258,9 @@ Observer.prototype.observeArray = function observeArray (items) {
  * Augment a target Object or Array by intercepting
  * the prototype chain using __proto__
  */
-function protoAugment (target, src) {
+function protoAugment(target, src) {
   /* eslint-disable no-proto */
+  // 覆盖原型对象
   target.__proto__ = src;
   /* eslint-enable no-proto */
 }
@@ -1194,7 +1270,7 @@ function protoAugment (target, src) {
  * hidden properties.
  */
 /* istanbul ignore next */
-function copyAugment (target, src, keys) {
+function copyAugment(target, src, keys) {
   for (var i = 0, l = keys.length; i < l; i++) {
     var key = keys[i];
     def(target, key, src[key]);
@@ -1206,16 +1282,19 @@ function copyAugment (target, src, keys) {
  * returns the new observer if successfully observed,
  * or the existing observer if the value already has one.
  */
-function observe (value, asRootData) {
+function observe(value, asRootData) {
+  // value 是否是对象
   if (!isObject(value) || value instanceof VNode) {
-    return
+    return;
   }
   var ob;
-  if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
+  //如果 value 有 __ob__（说明此对象已经是响应式的）, 直接获取并返回,
+  if (hasOwn(value, "__ob__") && value.__ob__ instanceof Observer) {
     ob = value.__ob__;
   } else if (
     shouldObserve &&
     !isServerRendering() &&
+    // 数组或对象
     (Array.isArray(value) || isPlainObject(value)) &&
     Object.isExtensible(value) &&
     !value._isVue
@@ -1225,70 +1304,85 @@ function observe (value, asRootData) {
   if (asRootData && ob) {
     ob.vmCount++;
   }
-  return ob
+  return ob;
 }
 
 /**
  * Define a reactive property on an Object.
  */
-function defineReactive$$1 (
+// 对每一个属性进行响应式属性, setter, getter
+function defineReactive$$1(
   obj,
   key,
   val,
   customSetter,
-  shallow
+  shallow // 是否递归观察对象
 ) {
+  // 当前属性的依赖(watcher)
   var dep = new Dep();
-
+  // 获取 obj.key 的属性描述符对象
   var property = Object.getOwnPropertyDescriptor(obj, key);
   if (property && property.configurable === false) {
-    return
+    return;
   }
 
   // cater for pre-defined getter/setters
+  // 提供预定义的存取器函数
   var getter = property && property.get;
   var setter = property && property.set;
   if ((!getter || setter) && arguments.length === 2) {
     val = obj[key];
   }
-
+  // 如果属性的值也是对象, 递归将值的属性都转成 setter/getter, 返回子观察对象
   var childOb = !shallow && observe(val);
   Object.defineProperty(obj, key, {
-    enumerable: true,
-    configurable: true,
-    get: function reactiveGetter () {
+    enumerable: true, // 可枚举
+    configurable: true, // 可配置
+    // get 会在 mountComponent => new Watcher 时初始化, 调用 updateComponent
+    get: function reactiveGetter() {
+      // 获取要返回的属性值
       var value = getter ? getter.call(obj) : val;
+      // 为当前属性添加依赖(watcher 对象), 当前属性的值改变时, 回去触发更新
       if (Dep.target) {
-        dep.depend();
+        dep.depend(); // 将 dep 添加中 watcher.newDeps, 将 watcher 添加到 dep.subs
+        // 如果子属性也需要观察, 建立子对象的依赖关系
         if (childOb) {
+          // 为子属性也收集当前依赖对象,  即子属性改变时, 也会触发当前依赖对象的改变
           childOb.dep.depend();
+          // 如果属性值(子属性)是数组, 则特殊处理收集数组对象依赖
           if (Array.isArray(value)) {
             dependArray(value);
           }
         }
       }
-      return value
+      return value;
     },
-    set: function reactiveSetter (newVal) {
+    set: function reactiveSetter(newVal) {
+      // 如果用户设置了 getter, 则 value 等于 getter 的返回值
+      // 否则直接赋予属性值
       var value = getter ? getter.call(obj) : val;
       /* eslint-disable no-self-compare */
+      // 如果新值等于旧值或者新值旧值为NaN则不执行
       if (newVal === value || (newVal !== newVal && value !== value)) {
-        return
+        return;
       }
       /* eslint-enable no-self-compare */
-      if (process.env.NODE_ENV !== 'production' && customSetter) {
+      if (process.env.NODE_ENV !== "production" && customSetter) {
         customSetter();
       }
       // #7981: for accessor properties without setter
-      if (getter && !setter) { return }
+      if (getter && !setter) { return; }
+      // 如果用户预定义了 setter, 则调用, 否则直接更新新值
       if (setter) {
         setter.call(obj, newVal);
       } else {
         val = newVal;
       }
+      // 如果新值是对象, 观察子对象并返回子的 observer 对象
       childOb = !shallow && observe(newVal);
+      // 派发更新(发布更改通知)
       dep.notify();
-    }
+    },
   });
 }
 
@@ -1297,43 +1391,54 @@ function defineReactive$$1 (
  * triggers change notification if the property doesn't
  * already exist.
  */
-function set (target, key, val) {
-  if (process.env.NODE_ENV !== 'production' &&
+function set(target, key, val) {
+  if (
+    process.env.NODE_ENV !== "production" &&
     (isUndef(target) || isPrimitive(target))
   ) {
-    warn(("Cannot set reactive property on undefined, null, or primitive value: " + ((target))));
+    warn(
+      ("Cannot set reactive property on undefined, null, or primitive value: " + ((target)))
+    );
   }
+  // 如果是数组
   if (Array.isArray(target) && isValidArrayIndex(key)) {
     target.length = Math.max(target.length, key);
+    // 调用 splice 方法, 已经处理过了, 获取触发响应式处理
     target.splice(key, 1, val);
-    return val
+    return val;
   }
+  // 如果 key 已经存在于 target 直接赋值即可
   if (key in target && !(key in Object.prototype)) {
     target[key] = val;
-    return val
+    return val;
   }
+  // 获取 target 的 observer 对象
   var ob = (target).__ob__;
   if (target._isVue || (ob && ob.vmCount)) {
-    process.env.NODE_ENV !== 'production' && warn(
-      'Avoid adding reactive properties to a Vue instance or its root $data ' +
-      'at runtime - declare it upfront in the data option.'
-    );
-    return val
+    process.env.NODE_ENV !== "production" &&
+      warn(
+        "Avoid adding reactive properties to a Vue instance or its root $data " +
+          "at runtime - declare it upfront in the data option."
+      );
+    return val;
   }
+  // 如果 ob 不存在, target 不是响应式对象, 直接返回
   if (!ob) {
     target[key] = val;
-    return val
+    return val;
   }
+  // 把 key 设置响应式, ob.value => target
   defineReactive$$1(ob.value, key, val);
+  // 发送通知更新
   ob.dep.notify();
-  return val
+  return val;
 }
 
 /**
  * Collect dependencies on array elements when the array is touched, since
  * we cannot intercept array element access like property getters.
  */
-function dependArray (value) {
+function dependArray(value) {
   for (var e = (void 0), i = 0, l = value.length; i < l; i++) {
     e = value[i];
     e && e.__ob__ && e.__ob__.dep.depend();
@@ -1606,14 +1711,18 @@ function assertObjectType (name, value, vm) {
 /*  */
 
 /*  */
+// 任务队列数组
+var callbacks = []; // [flushSchedulerQueue, flushSchedulerQueue, flushSchedulerQueue...]
 
-var callbacks = [];
-
-function flushCallbacks () {
+// 执行任务队列中的任务
+function flushCallbacks() {
+  // 复制所有任务
   var copies = callbacks.slice(0);
+  // 清空任务队列
   callbacks.length = 0;
   for (var i = 0; i < copies.length; i++) {
-    copies[i]();
+    // 执行所有任务
+    copies[i](); // 调用 flushSchedulerQueue
   }
 }
 
@@ -1624,11 +1733,13 @@ function flushCallbacks () {
 // completely stops working after triggering a few times... so, if native
 // Promise is available, we will use it:
 /* istanbul ignore next, $flow-disable-line */
-if (typeof Promise !== 'undefined' && isNative(Promise)) ; else if (!isIE && typeof MutationObserver !== 'undefined' && (
-  isNative(MutationObserver) ||
-  // PhantomJS and iOS 7.x
-  MutationObserver.toString() === '[object MutationObserverConstructor]'
-)) {
+if (typeof Promise !== "undefined" && isNative(Promise)) ; else if (
+  !isIE &&
+  typeof MutationObserver !== "undefined" &&
+  (isNative(MutationObserver) ||
+    // PhantomJS and iOS 7.x
+    MutationObserver.toString() === "[object MutationObserverConstructor]")
+) {
   // Use MutationObserver where native Promise is not available,
   // e.g. PhantomJS, iOS7, Android 4.4
   // (#6466 MutationObserver is unreliable in IE11)
@@ -1636,9 +1747,9 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) ; else if (!isIE && typ
   var observer = new MutationObserver(flushCallbacks);
   var textNode = document.createTextNode(String(counter));
   observer.observe(textNode, {
-    characterData: true
+    characterData: true,
   });
-} else if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) ;
+} else if (typeof setImmediate !== "undefined" && isNative(setImmediate)) ;
 
 /*  */
 
@@ -2381,7 +2492,7 @@ var platformMustUseProp;
 var platformGetTagNamespace;
 var maybeComponent;
 
-function createASTElement (
+function createASTElement(
   tag,
   attrs,
   parent
@@ -2393,32 +2504,33 @@ function createASTElement (
     attrsMap: makeAttrsMap(attrs),
     rawAttrsMap: {},
     parent: parent,
-    children: []
-  }
+    children: [],
+  };
 }
 
 /**
  * Convert HTML string to AST.
+ * 将模板解析成模板 AST
  */
-function parse (
+function parse(
   template,
   options
 ) {
   warn$1 = options.warn || baseWarn;
-
+  // 1.解析 options
   platformIsPreTag = options.isPreTag || no;
   platformMustUseProp = options.mustUseProp || no;
   platformGetTagNamespace = options.getTagNamespace || no;
   var isReservedTag = options.isReservedTag || no;
   maybeComponent = function (el) { return !!(
-    el.component ||
-    el.attrsMap[':is'] ||
-    el.attrsMap['v-bind:is'] ||
-    !(el.attrsMap.is ? isReservedTag(el.attrsMap.is) : isReservedTag(el.tag))
-  ); };
-  transforms = pluckModuleFunction(options.modules, 'transformNode');
-  preTransforms = pluckModuleFunction(options.modules, 'preTransformNode');
-  postTransforms = pluckModuleFunction(options.modules, 'postTransformNode');
+      el.component ||
+      el.attrsMap[":is"] ||
+      el.attrsMap["v-bind:is"] ||
+      !(el.attrsMap.is ? isReservedTag(el.attrsMap.is) : isReservedTag(el.tag))
+    ); };
+  transforms = pluckModuleFunction(options.modules, "transformNode");
+  preTransforms = pluckModuleFunction(options.modules, "preTransformNode");
+  postTransforms = pluckModuleFunction(options.modules, "postTransformNode");
 
   delimiters = options.delimiters;
 
@@ -2431,14 +2543,14 @@ function parse (
   var inPre = false;
   var warned = false;
 
-  function warnOnce (msg, range) {
+  function warnOnce(msg, range) {
     if (!warned) {
       warned = true;
       warn$1(msg, range);
     }
   }
 
-  function closeElement (element) {
+  function closeElement(element) {
     trimEndingWhitespace(element);
     if (!inVPre && !element.processed) {
       element = processElement(element, options);
@@ -2447,18 +2559,18 @@ function parse (
     if (!stack.length && element !== root) {
       // allow root elements with v-if, v-else-if and v-else
       if (root.if && (element.elseif || element.else)) {
-        if (process.env.NODE_ENV !== 'production') {
+        if (process.env.NODE_ENV !== "production") {
           checkRootConstraints(element);
         }
         addIfCondition(root, {
           exp: element.elseif,
-          block: element
+          block: element,
         });
-      } else if (process.env.NODE_ENV !== 'production') {
+      } else if (process.env.NODE_ENV !== "production") {
         warnOnce(
           "Component template should contain exactly one root element. " +
-          "If you are using v-if on multiple elements, " +
-          "use v-else-if to chain them instead.",
+            "If you are using v-if on multiple elements, " +
+            "use v-else-if to chain them instead.",
           { start: element.start }
         );
       }
@@ -2471,8 +2583,10 @@ function parse (
           // scoped slot
           // keep it in the children list so that v-else(-if) conditions can
           // find it as the prev node.
-          var name = element.slotTarget || '"default"'
-          ;(currentParent.scopedSlots || (currentParent.scopedSlots = {}))[name] = element;
+          var name = element.slotTarget || '"default"';
+          (currentParent.scopedSlots || (currentParent.scopedSlots = {}))[
+            name
+          ] = element;
         }
         currentParent.children.push(element);
         element.parent = currentParent;
@@ -2498,37 +2612,37 @@ function parse (
     }
   }
 
-  function trimEndingWhitespace (el) {
+  function trimEndingWhitespace(el) {
     // remove trailing whitespace node
     if (!inPre) {
       var lastNode;
       while (
         (lastNode = el.children[el.children.length - 1]) &&
         lastNode.type === 3 &&
-        lastNode.text === ' '
+        lastNode.text === " "
       ) {
         el.children.pop();
       }
     }
   }
 
-  function checkRootConstraints (el) {
-    if (el.tag === 'slot' || el.tag === 'template') {
+  function checkRootConstraints(el) {
+    if (el.tag === "slot" || el.tag === "template") {
       warnOnce(
         "Cannot use <" + (el.tag) + "> as component root element because it may " +
-        'contain multiple nodes.',
+          "contain multiple nodes.",
         { start: el.start }
       );
     }
-    if (el.attrsMap.hasOwnProperty('v-for')) {
+    if (el.attrsMap.hasOwnProperty("v-for")) {
       warnOnce(
-        'Cannot use v-for on stateful component root element because ' +
-        'it renders multiple elements.',
-        el.rawAttrsMap['v-for']
+        "Cannot use v-for on stateful component root element because " +
+          "it renders multiple elements.",
+        el.rawAttrsMap["v-for"]
       );
     }
   }
-
+  // 2.解析模版
   parseHTML(template, {
     warn: warn$1,
     expectHTML: options.expectHTML,
@@ -2538,39 +2652,42 @@ function parse (
     shouldDecodeNewlinesForHref: options.shouldDecodeNewlinesForHref,
     shouldKeepComment: options.comments,
     outputSourceRange: options.outputSourceRange,
-    start: function start (tag, attrs, unary, start$1, end) {
+    // 解析开始标签, 创建元素 ast 节点
+    start: function start(tag, attrs, unary, start$1, end) {
       // check namespace.
       // inherit parent ns if there is one
-      var ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag);
+      var ns =
+        (currentParent && currentParent.ns) || platformGetTagNamespace(tag);
 
       // handle IE svg bug
       /* istanbul ignore if */
-      if (isIE && ns === 'svg') {
+      if (isIE && ns === "svg") {
         attrs = guardIESVGBug(attrs);
       }
-
+      // 创建元素 ast
+      // createASTElement(标签名, 属性, 父级 ast)
       var element = createASTElement(tag, attrs, currentParent);
       if (ns) {
         element.ns = ns;
       }
 
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== "production") {
         if (options.outputSourceRange) {
           element.start = start$1;
           element.end = end;
           element.rawAttrsMap = element.attrsList.reduce(function (cumulated, attr) {
             cumulated[attr.name] = attr;
-            return cumulated
+            return cumulated;
           }, {});
         }
         attrs.forEach(function (attr) {
           if (invalidAttributeRE.test(attr.name)) {
             warn$1(
               "Invalid dynamic argument expression: attribute names cannot contain " +
-              "spaces, quotes, <, >, / or =.",
+                "spaces, quotes, <, >, / or =.",
               {
                 start: attr.start + attr.name.indexOf("["),
-                end: attr.start + attr.name.length
+                end: attr.start + attr.name.length,
               }
             );
           }
@@ -2579,12 +2696,14 @@ function parse (
 
       if (isForbiddenTag(element) && !isServerRendering()) {
         element.forbidden = true;
-        process.env.NODE_ENV !== 'production' && warn$1(
-          'Templates should only be responsible for mapping the state to the ' +
-          'UI. Avoid placing tags with side-effects in your templates, such as ' +
-          "<" + tag + ">" + ', as they will not be parsed.',
-          { start: element.start }
-        );
+        process.env.NODE_ENV !== "production" &&
+          warn$1(
+            "Templates should only be responsible for mapping the state to the " +
+              "UI. Avoid placing tags with side-effects in your templates, such as " +
+              "<" + tag + ">" +
+              ", as they will not be parsed.",
+            { start: element.start }
+          );
       }
 
       // apply pre-transforms
@@ -2612,7 +2731,7 @@ function parse (
 
       if (!root) {
         root = element;
-        if (process.env.NODE_ENV !== 'production') {
+        if (process.env.NODE_ENV !== "production") {
           checkRootConstraints(root);
         }
       }
@@ -2624,82 +2743,89 @@ function parse (
         closeElement(element);
       }
     },
-
-    end: function end (tag, start, end$1) {
+    // 解析结束标签
+    end: function end(tag, start, end$1) {
       var element = stack[stack.length - 1];
       // pop stack
       stack.length -= 1;
       currentParent = stack[stack.length - 1];
-      if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
+      if (process.env.NODE_ENV !== "production" && options.outputSourceRange) {
         element.end = end$1;
       }
       closeElement(element);
     },
-
-    chars: function chars (text, start, end) {
+    // 解析文本, 创建文本 ast 节点
+    chars: function chars(text, start, end) {
       if (!currentParent) {
-        if (process.env.NODE_ENV !== 'production') {
+        if (process.env.NODE_ENV !== "production") {
           if (text === template) {
             warnOnce(
-              'Component template requires a root element, rather than just text.',
+              "Component template requires a root element, rather than just text.",
               { start: start }
             );
           } else if ((text = text.trim())) {
-            warnOnce(
-              ("text \"" + text + "\" outside root element will be ignored."),
-              { start: start }
-            );
+            warnOnce(("text \"" + text + "\" outside root element will be ignored."), {
+              start: start,
+            });
           }
         }
-        return
+        return;
       }
       // IE textarea placeholder bug
       /* istanbul ignore if */
-      if (isIE &&
-        currentParent.tag === 'textarea' &&
+      if (
+        isIE &&
+        currentParent.tag === "textarea" &&
         currentParent.attrsMap.placeholder === text
       ) {
-        return
+        return;
       }
       var children = currentParent.children;
       if (inPre || text.trim()) {
         text = isTextTag(currentParent) ? text : decodeHTMLCached(text);
       } else if (!children.length) {
         // remove the whitespace-only node right after an opening tag
-        text = '';
+        text = "";
       } else if (whitespaceOption) {
-        if (whitespaceOption === 'condense') {
+        if (whitespaceOption === "condense") {
           // in condense mode, remove the whitespace node if it contains
           // line break, otherwise condense to a single space
-          text = lineBreakRE.test(text) ? '' : ' ';
+          text = lineBreakRE.test(text) ? "" : " ";
         } else {
-          text = ' ';
+          text = " ";
         }
       } else {
-        text = preserveWhitespace ? ' ' : '';
+        text = preserveWhitespace ? " " : "";
       }
       if (text) {
-        if (!inPre && whitespaceOption === 'condense') {
+        if (!inPre && whitespaceOption === "condense") {
           // condense consecutive whitespaces into single space
-          text = text.replace(whitespaceRE, ' ');
+          text = text.replace(whitespaceRE, " ");
         }
         var res;
         var child;
-        if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
+        if (!inVPre && text !== " " && (res = parseText(text, delimiters))) {
           child = {
             type: 2,
             expression: res.expression,
             tokens: res.tokens,
-            text: text
+            text: text,
           };
-        } else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
+        } else if (
+          text !== " " ||
+          !children.length ||
+          children[children.length - 1].text !== " "
+        ) {
           child = {
             type: 3,
-            text: text
+            text: text,
           };
         }
         if (child) {
-          if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
+          if (
+            process.env.NODE_ENV !== "production" &&
+            options.outputSourceRange
+          ) {
             child.start = start;
             child.end = end;
           }
@@ -2707,41 +2833,45 @@ function parse (
         }
       }
     },
-    comment: function comment (text, start, end) {
+    // 解析注释, 创建注释 ast 节点
+    comment: function comment(text, start, end) {
       // adding anything as a sibling to the root node is forbidden
       // comments should still be allowed, but ignored
       if (currentParent) {
         var child = {
           type: 3,
           text: text,
-          isComment: true
+          isComment: true,
         };
-        if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
+        if (
+          process.env.NODE_ENV !== "production" &&
+          options.outputSourceRange
+        ) {
           child.start = start;
           child.end = end;
         }
         currentParent.children.push(child);
       }
-    }
+    },
   });
-  return root
+  return root; // ast 树
 }
 
-function processPre (el) {
-  if (getAndRemoveAttr(el, 'v-pre') != null) {
+function processPre(el) {
+  if (getAndRemoveAttr(el, "v-pre") != null) {
     el.pre = true;
   }
 }
 
-function processRawAttrs (el) {
+function processRawAttrs(el) {
   var list = el.attrsList;
   var len = list.length;
   if (len) {
-    var attrs = el.attrs = new Array(len);
+    var attrs = (el.attrs = new Array(len));
     for (var i = 0; i < len; i++) {
       attrs[i] = {
         name: list[i].name,
-        value: JSON.stringify(list[i].value)
+        value: JSON.stringify(list[i].value),
       };
       if (list[i].start != null) {
         attrs[i].start = list[i].start;
@@ -2754,19 +2884,13 @@ function processRawAttrs (el) {
   }
 }
 
-function processElement (
-  element,
-  options
-) {
+function processElement(element, options) {
   processKey(element);
 
   // determine whether this is a plain element after
   // removing structural attributes
-  element.plain = (
-    !element.key &&
-    !element.scopedSlots &&
-    !element.attrsList.length
-  );
+  element.plain =
+    !element.key && !element.scopedSlots && !element.attrsList.length;
 
   processRef(element);
   processSlotContent(element);
@@ -2776,27 +2900,32 @@ function processElement (
     element = transforms[i](element, options) || element;
   }
   processAttrs(element);
-  return element
+  return element;
 }
 
-function processKey (el) {
-  var exp = getBindingAttr(el, 'key');
+function processKey(el) {
+  var exp = getBindingAttr(el, "key");
   if (exp) {
-    if (process.env.NODE_ENV !== 'production') {
-      if (el.tag === 'template') {
+    if (process.env.NODE_ENV !== "production") {
+      if (el.tag === "template") {
         warn$1(
           "<template> cannot be keyed. Place the key on real elements instead.",
-          getRawBindingAttr(el, 'key')
+          getRawBindingAttr(el, "key")
         );
       }
       if (el.for) {
         var iterator = el.iterator2 || el.iterator1;
         var parent = el.parent;
-        if (iterator && iterator === exp && parent && parent.tag === 'transition-group') {
+        if (
+          iterator &&
+          iterator === exp &&
+          parent &&
+          parent.tag === "transition-group"
+        ) {
           warn$1(
             "Do not use v-for index as key on <transition-group> children, " +
-            "this is the same as not using keys.",
-            getRawBindingAttr(el, 'key'),
+              "this is the same as not using keys.",
+            getRawBindingAttr(el, "key"),
             true /* tip */
           );
         }
@@ -2806,40 +2935,37 @@ function processKey (el) {
   }
 }
 
-function processRef (el) {
-  var ref = getBindingAttr(el, 'ref');
+function processRef(el) {
+  var ref = getBindingAttr(el, "ref");
   if (ref) {
     el.ref = ref;
     el.refInFor = checkInFor(el);
   }
 }
 
-function processFor (el) {
+function processFor(el) {
   var exp;
-  if ((exp = getAndRemoveAttr(el, 'v-for'))) {
+  if ((exp = getAndRemoveAttr(el, "v-for"))) {
     var res = parseFor(exp);
     if (res) {
       extend(el, res);
-    } else if (process.env.NODE_ENV !== 'production') {
-      warn$1(
-        ("Invalid v-for expression: " + exp),
-        el.rawAttrsMap['v-for']
-      );
+    } else if (process.env.NODE_ENV !== "production") {
+      warn$1(("Invalid v-for expression: " + exp), el.rawAttrsMap["v-for"]);
     }
   }
 }
 
 
 
-function parseFor (exp) {
+function parseFor(exp) {
   var inMatch = exp.match(forAliasRE);
-  if (!inMatch) { return }
+  if (!inMatch) { return; }
   var res = {};
   res.for = inMatch[2].trim();
-  var alias = inMatch[1].trim().replace(stripParensRE, '');
+  var alias = inMatch[1].trim().replace(stripParensRE, "");
   var iteratorMatch = alias.match(forIteratorRE);
   if (iteratorMatch) {
-    res.alias = alias.replace(forIteratorRE, '').trim();
+    res.alias = alias.replace(forIteratorRE, "").trim();
     res.iterator1 = iteratorMatch[1].trim();
     if (iteratorMatch[2]) {
       res.iterator2 = iteratorMatch[2].trim();
@@ -2847,54 +2973,54 @@ function parseFor (exp) {
   } else {
     res.alias = alias;
   }
-  return res
+  return res;
 }
 
-function processIf (el) {
-  var exp = getAndRemoveAttr(el, 'v-if');
+function processIf(el) {
+  var exp = getAndRemoveAttr(el, "v-if");
   if (exp) {
     el.if = exp;
     addIfCondition(el, {
       exp: exp,
-      block: el
+      block: el,
     });
   } else {
-    if (getAndRemoveAttr(el, 'v-else') != null) {
+    if (getAndRemoveAttr(el, "v-else") != null) {
       el.else = true;
     }
-    var elseif = getAndRemoveAttr(el, 'v-else-if');
+    var elseif = getAndRemoveAttr(el, "v-else-if");
     if (elseif) {
       el.elseif = elseif;
     }
   }
 }
 
-function processIfConditions (el, parent) {
+function processIfConditions(el, parent) {
   var prev = findPrevElement(parent.children);
   if (prev && prev.if) {
     addIfCondition(prev, {
       exp: el.elseif,
-      block: el
+      block: el,
     });
-  } else if (process.env.NODE_ENV !== 'production') {
+  } else if (process.env.NODE_ENV !== "production") {
     warn$1(
-      "v-" + (el.elseif ? ('else-if="' + el.elseif + '"') : 'else') + " " +
-      "used on element <" + (el.tag) + "> without corresponding v-if.",
-      el.rawAttrsMap[el.elseif ? 'v-else-if' : 'v-else']
+      "v-" + (el.elseif ? 'else-if="' + el.elseif + '"' : "else") + " " +
+        "used on element <" + (el.tag) + "> without corresponding v-if.",
+      el.rawAttrsMap[el.elseif ? "v-else-if" : "v-else"]
     );
   }
 }
 
-function findPrevElement (children) {
+function findPrevElement(children) {
   var i = children.length;
   while (i--) {
     if (children[i].type === 1) {
-      return children[i]
+      return children[i];
     } else {
-      if (process.env.NODE_ENV !== 'production' && children[i].text !== ' ') {
+      if (process.env.NODE_ENV !== "production" && children[i].text !== " ") {
         warn$1(
           "text \"" + (children[i].text.trim()) + "\" between v-if and v-else(-if) " +
-          "will be ignored.",
+            "will be ignored.",
           children[i]
         );
       }
@@ -2903,15 +3029,15 @@ function findPrevElement (children) {
   }
 }
 
-function addIfCondition (el, condition) {
+function addIfCondition(el, condition) {
   if (!el.ifConditions) {
     el.ifConditions = [];
   }
   el.ifConditions.push(condition);
 }
 
-function processOnce (el) {
-  var once$$1 = getAndRemoveAttr(el, 'v-once');
+function processOnce(el) {
+  var once$$1 = getAndRemoveAttr(el, "v-once");
   if (once$$1 != null) {
     el.once = true;
   }
@@ -2919,30 +3045,30 @@ function processOnce (el) {
 
 // handle content being passed to a component as slot,
 // e.g. <template slot="xxx">, <div slot-scope="xxx">
-function processSlotContent (el) {
+function processSlotContent(el) {
   var slotScope;
-  if (el.tag === 'template') {
-    slotScope = getAndRemoveAttr(el, 'scope');
+  if (el.tag === "template") {
+    slotScope = getAndRemoveAttr(el, "scope");
     /* istanbul ignore if */
-    if (process.env.NODE_ENV !== 'production' && slotScope) {
+    if (process.env.NODE_ENV !== "production" && slotScope) {
       warn$1(
         "the \"scope\" attribute for scoped slots have been deprecated and " +
-        "replaced by \"slot-scope\" since 2.5. The new \"slot-scope\" attribute " +
-        "can also be used on plain elements in addition to <template> to " +
-        "denote scoped slots.",
-        el.rawAttrsMap['scope'],
+          "replaced by \"slot-scope\" since 2.5. The new \"slot-scope\" attribute " +
+          "can also be used on plain elements in addition to <template> to " +
+          "denote scoped slots.",
+        el.rawAttrsMap["scope"],
         true
       );
     }
-    el.slotScope = slotScope || getAndRemoveAttr(el, 'slot-scope');
-  } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) {
+    el.slotScope = slotScope || getAndRemoveAttr(el, "slot-scope");
+  } else if ((slotScope = getAndRemoveAttr(el, "slot-scope"))) {
     /* istanbul ignore if */
-    if (process.env.NODE_ENV !== 'production' && el.attrsMap['v-for']) {
+    if (process.env.NODE_ENV !== "production" && el.attrsMap["v-for"]) {
       warn$1(
         "Ambiguous combined usage of slot-scope and v-for on <" + (el.tag) + "> " +
-        "(v-for takes higher priority). Use a wrapper <template> for the " +
-        "scoped slot to make it clearer.",
-        el.rawAttrsMap['slot-scope'],
+          "(v-for takes higher priority). Use a wrapper <template> for the " +
+          "scoped slot to make it clearer.",
+        el.rawAttrsMap["slot-scope"],
         true
       );
     }
@@ -2950,34 +3076,33 @@ function processSlotContent (el) {
   }
 
   // slot="xxx"
-  var slotTarget = getBindingAttr(el, 'slot');
+  var slotTarget = getBindingAttr(el, "slot");
   if (slotTarget) {
     el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget;
-    el.slotTargetDynamic = !!(el.attrsMap[':slot'] || el.attrsMap['v-bind:slot']);
+    el.slotTargetDynamic = !!(
+      el.attrsMap[":slot"] || el.attrsMap["v-bind:slot"]
+    );
     // preserve slot as an attribute for native shadow DOM compat
     // only for non-scoped slots.
-    if (el.tag !== 'template' && !el.slotScope) {
-      addAttr(el, 'slot', slotTarget, getRawBindingAttr(el, 'slot'));
+    if (el.tag !== "template" && !el.slotScope) {
+      addAttr(el, "slot", slotTarget, getRawBindingAttr(el, "slot"));
     }
   }
 
   // 2.6 v-slot syntax
   {
-    if (el.tag === 'template') {
+    if (el.tag === "template") {
       // v-slot on <template>
       var slotBinding = getAndRemoveAttrByRegex(el, slotRE);
       if (slotBinding) {
-        if (process.env.NODE_ENV !== 'production') {
+        if (process.env.NODE_ENV !== "production") {
           if (el.slotTarget || el.slotScope) {
-            warn$1(
-              "Unexpected mixed usage of different slot syntaxes.",
-              el
-            );
+            warn$1("Unexpected mixed usage of different slot syntaxes.", el);
           }
           if (el.parent && !maybeComponent(el.parent)) {
             warn$1(
               "<template v-slot> can only appear at the root level inside " +
-              "the receiving component",
+                "the receiving component",
               el
             );
           }
@@ -2993,7 +3118,7 @@ function processSlotContent (el) {
       // v-slot on component, denotes default slot
       var slotBinding$1 = getAndRemoveAttrByRegex(el, slotRE);
       if (slotBinding$1) {
-        if (process.env.NODE_ENV !== 'production') {
+        if (process.env.NODE_ENV !== "production") {
           if (!maybeComponent(el)) {
             warn$1(
               "v-slot can only be used on components or <template>.",
@@ -3001,15 +3126,12 @@ function processSlotContent (el) {
             );
           }
           if (el.slotScope || el.slotTarget) {
-            warn$1(
-              "Unexpected mixed usage of different slot syntaxes.",
-              el
-            );
+            warn$1("Unexpected mixed usage of different slot syntaxes.", el);
           }
           if (el.scopedSlots) {
             warn$1(
               "To avoid scope ambiguity, the default slot should also use " +
-              "<template> syntax when there are other named slots.",
+                "<template> syntax when there are other named slots.",
               slotBinding$1
             );
           }
@@ -3019,13 +3141,17 @@ function processSlotContent (el) {
         var ref$1 = getSlotName(slotBinding$1);
         var name$1 = ref$1.name;
         var dynamic$1 = ref$1.dynamic;
-        var slotContainer = slots[name$1] = createASTElement('template', [], el);
+        var slotContainer = (slots[name$1] = createASTElement(
+          "template",
+          [],
+          el
+        ));
         slotContainer.slotTarget = name$1;
         slotContainer.slotTargetDynamic = dynamic$1;
         slotContainer.children = el.children.filter(function (c) {
           if (!c.slotScope) {
             c.parent = slotContainer;
-            return true
+            return true;
           }
         });
         slotContainer.slotScope = slotBinding$1.value || emptySlotScopeToken;
@@ -3038,51 +3164,48 @@ function processSlotContent (el) {
   }
 }
 
-function getSlotName (binding) {
-  var name = binding.name.replace(slotRE, '');
+function getSlotName(binding) {
+  var name = binding.name.replace(slotRE, "");
   if (!name) {
-    if (binding.name[0] !== '#') {
-      name = 'default';
-    } else if (process.env.NODE_ENV !== 'production') {
-      warn$1(
-        "v-slot shorthand syntax requires a slot name.",
-        binding
-      );
+    if (binding.name[0] !== "#") {
+      name = "default";
+    } else if (process.env.NODE_ENV !== "production") {
+      warn$1("v-slot shorthand syntax requires a slot name.", binding);
     }
   }
   return dynamicArgRE.test(name)
-    // dynamic [name]
-    ? { name: name.slice(1, -1), dynamic: true }
-    // static name
-    : { name: ("\"" + name + "\""), dynamic: false }
+    ? // dynamic [name]
+      { name: name.slice(1, -1), dynamic: true }
+    : // static name
+      { name: ("\"" + name + "\""), dynamic: false };
 }
 
 // handle <slot/> outlets
-function processSlotOutlet (el) {
-  if (el.tag === 'slot') {
-    el.slotName = getBindingAttr(el, 'name');
-    if (process.env.NODE_ENV !== 'production' && el.key) {
+function processSlotOutlet(el) {
+  if (el.tag === "slot") {
+    el.slotName = getBindingAttr(el, "name");
+    if (process.env.NODE_ENV !== "production" && el.key) {
       warn$1(
         "`key` does not work on <slot> because slots are abstract outlets " +
-        "and can possibly expand into multiple elements. " +
-        "Use the key on a wrapping element instead.",
-        getRawBindingAttr(el, 'key')
+          "and can possibly expand into multiple elements. " +
+          "Use the key on a wrapping element instead.",
+        getRawBindingAttr(el, "key")
       );
     }
   }
 }
 
-function processComponent (el) {
+function processComponent(el) {
   var binding;
-  if ((binding = getBindingAttr(el, 'is'))) {
+  if ((binding = getBindingAttr(el, "is"))) {
     el.component = binding;
   }
-  if (getAndRemoveAttr(el, 'inline-template') != null) {
+  if (getAndRemoveAttr(el, "inline-template") != null) {
     el.inlineTemplate = true;
   }
 }
 
-function processAttrs (el) {
+function processAttrs(el) {
   var list = el.attrsList;
   var i, l, name, rawName, value, modifiers, syncGen, isDynamic;
   for (i = 0, l = list.length; i < l; i++) {
@@ -3092,20 +3215,21 @@ function processAttrs (el) {
       // mark element as dynamic
       el.hasBindings = true;
       // modifiers
-      modifiers = parseModifiers(name.replace(dirRE, ''));
+      modifiers = parseModifiers(name.replace(dirRE, ""));
       // support .foo shorthand syntax for the .prop modifier
       if (modifiers) {
-        name = name.replace(modifierRE, '');
+        name = name.replace(modifierRE, "");
       }
-      if (bindRE.test(name)) { // v-bind
-        name = name.replace(bindRE, '');
+      if (bindRE.test(name)) {
+        // v-bind
+        name = name.replace(bindRE, "");
         value = parseFilters(value);
         isDynamic = dynamicArgRE.test(name);
         if (isDynamic) {
           name = name.slice(1, -1);
         }
         if (
-          process.env.NODE_ENV !== 'production' &&
+          process.env.NODE_ENV !== "production" &&
           value.trim().length === 0
         ) {
           warn$1(
@@ -3115,7 +3239,7 @@ function processAttrs (el) {
         if (modifiers) {
           if (modifiers.prop && !isDynamic) {
             name = camelize(name);
-            if (name === 'innerHtml') { name = 'innerHTML'; }
+            if (name === "innerHtml") { name = "innerHTML"; }
           }
           if (modifiers.camel && !isDynamic) {
             name = camelize(name);
@@ -3158,22 +3282,25 @@ function processAttrs (el) {
             }
           }
         }
-        if ((modifiers && modifiers.prop) || (
-          !el.component && platformMustUseProp(el.tag, el.attrsMap.type, name)
-        )) {
+        if (
+          (modifiers && modifiers.prop) ||
+          (!el.component && platformMustUseProp(el.tag, el.attrsMap.type, name))
+        ) {
           addProp(el, name, value, list[i], isDynamic);
         } else {
           addAttr(el, name, value, list[i], isDynamic);
         }
-      } else if (onRE.test(name)) { // v-on
-        name = name.replace(onRE, '');
+      } else if (onRE.test(name)) {
+        // v-on
+        name = name.replace(onRE, "");
         isDynamic = dynamicArgRE.test(name);
         if (isDynamic) {
           name = name.slice(1, -1);
         }
         addHandler(el, name, value, modifiers, false, warn$1, list[i], isDynamic);
-      } else { // normal directives
-        name = name.replace(dirRE, '');
+      } else {
+        // normal directives
+        name = name.replace(dirRE, "");
         // parse arg
         var argMatch = name.match(argRE);
         var arg = argMatch && argMatch[1];
@@ -3185,21 +3312,30 @@ function processAttrs (el) {
             isDynamic = true;
           }
         }
-        addDirective(el, name, rawName, value, arg, isDynamic, modifiers, list[i]);
-        if (process.env.NODE_ENV !== 'production' && name === 'model') {
+        addDirective(
+          el,
+          name,
+          rawName,
+          value,
+          arg,
+          isDynamic,
+          modifiers,
+          list[i]
+        );
+        if (process.env.NODE_ENV !== "production" && name === "model") {
           checkForAliasModel(el, value);
         }
       }
     } else {
       // literal attribute
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== "production") {
         var res = parseText(value, delimiters);
         if (res) {
           warn$1(
             name + "=\"" + value + "\": " +
-            'Interpolation inside attributes has been removed. ' +
-            'Use v-bind or the colon shorthand instead. For example, ' +
-            'instead of <div id="{{ val }}">, use <div :id="val">.',
+              "Interpolation inside attributes has been removed. " +
+              "Use v-bind or the colon shorthand instead. For example, " +
+              'instead of <div id="{{ val }}">, use <div :id="val">.',
             list[i]
           );
         }
@@ -3207,91 +3343,95 @@ function processAttrs (el) {
       addAttr(el, name, JSON.stringify(value), list[i]);
       // #6887 firefox doesn't update muted state if set via attribute
       // even immediately after element creation
-      if (!el.component &&
-          name === 'muted' &&
-          platformMustUseProp(el.tag, el.attrsMap.type, name)) {
-        addProp(el, name, 'true', list[i]);
+      if (
+        !el.component &&
+        name === "muted" &&
+        platformMustUseProp(el.tag, el.attrsMap.type, name)
+      ) {
+        addProp(el, name, "true", list[i]);
       }
     }
   }
 }
 
-function checkInFor (el) {
+function checkInFor(el) {
   var parent = el;
   while (parent) {
     if (parent.for !== undefined) {
-      return true
+      return true;
     }
     parent = parent.parent;
   }
-  return false
+  return false;
 }
 
-function parseModifiers (name) {
+function parseModifiers(name) {
   var match = name.match(modifierRE);
   if (match) {
     var ret = {};
-    match.forEach(function (m) { ret[m.slice(1)] = true; });
-    return ret
+    match.forEach(function (m) {
+      ret[m.slice(1)] = true;
+    });
+    return ret;
   }
 }
 
-function makeAttrsMap (attrs) {
+function makeAttrsMap(attrs) {
   var map = {};
   for (var i = 0, l = attrs.length; i < l; i++) {
     if (
-      process.env.NODE_ENV !== 'production' &&
-      map[attrs[i].name] && !isIE && !isEdge
+      process.env.NODE_ENV !== "production" &&
+      map[attrs[i].name] &&
+      !isIE &&
+      !isEdge
     ) {
-      warn$1('duplicate attribute: ' + attrs[i].name, attrs[i]);
+      warn$1("duplicate attribute: " + attrs[i].name, attrs[i]);
     }
     map[attrs[i].name] = attrs[i].value;
   }
-  return map
+  return map;
 }
 
 // for script (e.g. type="x/template") or style, do not decode content
-function isTextTag (el) {
-  return el.tag === 'script' || el.tag === 'style'
+function isTextTag(el) {
+  return el.tag === "script" || el.tag === "style";
 }
 
-function isForbiddenTag (el) {
+function isForbiddenTag(el) {
   return (
-    el.tag === 'style' ||
-    (el.tag === 'script' && (
-      !el.attrsMap.type ||
-      el.attrsMap.type === 'text/javascript'
-    ))
-  )
+    el.tag === "style" ||
+    (el.tag === "script" &&
+      (!el.attrsMap.type || el.attrsMap.type === "text/javascript"))
+  );
 }
 
 var ieNSBug = /^xmlns:NS\d+/;
 var ieNSPrefix = /^NS\d+:/;
 
 /* istanbul ignore next */
-function guardIESVGBug (attrs) {
+function guardIESVGBug(attrs) {
   var res = [];
   for (var i = 0; i < attrs.length; i++) {
     var attr = attrs[i];
     if (!ieNSBug.test(attr.name)) {
-      attr.name = attr.name.replace(ieNSPrefix, '');
+      attr.name = attr.name.replace(ieNSPrefix, "");
       res.push(attr);
     }
   }
-  return res
+  return res;
 }
 
-function checkForAliasModel (el, value) {
+function checkForAliasModel(el, value) {
   var _el = el;
   while (_el) {
     if (_el.for && _el.alias === value) {
       warn$1(
         "<" + (el.tag) + " v-model=\"" + value + "\">: " +
-        "You are binding v-model directly to a v-for iteration alias. " +
-        "This will not be able to modify the v-for source array because " +
-        "writing to the alias is like modifying a function local variable. " +
-        "Consider using an array of objects and use v-model on an object property instead.",
-        el.rawAttrsMap['v-model']
+          "You are binding v-model directly to a v-for iteration alias. " +
+          "This will not be able to modify the v-for source array because " +
+          "writing to the alias is like modifying a function local variable. " +
+          "Consider using an array of objects and use v-model on an object property instead.",
+        el.rawAttrsMap["v-model"]
       );
     }
     _el = _el.parent;
@@ -3605,24 +3745,26 @@ var genStaticKeysCached = cached(genStaticKeys$1);
  *    create fresh nodes for them on each re-render;
  * 2. Completely skip them in the patching process.
  */
-function optimize (root, options) {
-  if (!root) { return }
-  isStaticKey = genStaticKeysCached(options.staticKeys || '');
+function optimize(root, options) {
+  if (!root) { return; }
+  isStaticKey = genStaticKeysCached(options.staticKeys || "");
   isPlatformReservedTag = options.isReservedTag || no;
   // first pass: mark all non-static nodes.
+  // 标记静态节点
   markStatic(root);
   // second pass: mark static roots.
+  // 标记静态根节点
   markStaticRoots(root, false);
 }
 
-function genStaticKeys$1 (keys) {
+function genStaticKeys$1(keys) {
   return makeMap(
-    'type,tag,attrsList,attrsMap,plain,parent,children,attrs,start,end,rawAttrsMap' +
-    (keys ? ',' + keys : '')
-  )
+    "type,tag,attrsList,attrsMap,plain,parent,children,attrs,start,end,rawAttrsMap" +
+      (keys ? "," + keys : "")
+  );
 }
 
-function markStatic (node) {
+function markStatic(node) {
   node.static = isStatic(node);
   if (node.type === 1) {
     // do not make component slot content static. this avoids
@@ -3630,10 +3772,10 @@ function markStatic (node) {
     // 2. static slot content fails for hot-reloading
     if (
       !isPlatformReservedTag(node.tag) &&
-      node.tag !== 'slot' &&
-      node.attrsMap['inline-template'] == null
+      node.tag !== "slot" &&
+      node.attrsMap["inline-template"] == null
     ) {
-      return
+      return;
     }
     for (var i = 0, l = node.children.length; i < l; i++) {
       var child = node.children[i];
@@ -3654,7 +3796,7 @@ function markStatic (node) {
   }
 }
 
-function markStaticRoots (node, isInFor) {
+function markStaticRoots(node, isInFor) {
   if (node.type === 1) {
     if (node.static || node.once) {
       node.staticInFor = isInFor;
@@ -3662,15 +3804,19 @@ function markStaticRoots (node, isInFor) {
     // For a node to qualify as a static root, it should have children that
     // are not just static text. Otherwise the cost of hoisting out will
     // outweigh the benefits and it's better off to just always render it fresh.
-    if (node.static && node.children.length && !(
-      node.children.length === 1 &&
-      node.children[0].type === 3
-    )) {
+    // 如果一个元素内只有文本节点, 此时这个元素不是静态的
+    // Vue 认为这种情况没有优化空间
+    if (
+      node.static &&
+      node.children.length &&
+      !(node.children.length === 1 && node.children[0].type === 3)
+    ) {
       node.staticRoot = true;
-      return
+      return;
     } else {
       node.staticRoot = false;
     }
+    // 检测当前节点的子节点中是否有静态的 root
     if (node.children) {
       for (var i = 0, l = node.children.length; i < l; i++) {
         markStaticRoots(node.children[i], isInFor || !!node.for);
@@ -3684,34 +3830,38 @@ function markStaticRoots (node, isInFor) {
   }
 }
 
-function isStatic (node) {
-  if (node.type === 2) { // expression
-    return false
+function isStatic(node) {
+  if (node.type === 2) {
+    // expression
+    return false;
   }
-  if (node.type === 3) { // text
-    return true
+  if (node.type === 3) {
+    // text
+    return true;
   }
-  return !!(node.pre || (
-    !node.hasBindings && // no dynamic bindings
-    !node.if && !node.for && // not v-if or v-for or v-else
-    !isBuiltInTag(node.tag) && // not a built-in
-    isPlatformReservedTag(node.tag) && // not a component
-    !isDirectChildOfTemplateFor(node) &&
-    Object.keys(node).every(isStaticKey)
-  ))
+  return !!(
+    node.pre ||
+    (!node.hasBindings && // no dynamic bindings
+      !node.if &&
+      !node.for && // not v-if or v-for or v-else
+      !isBuiltInTag(node.tag) && // not a built-in
+      isPlatformReservedTag(node.tag) && // not a component
+      !isDirectChildOfTemplateFor(node) &&
+      Object.keys(node).every(isStaticKey))
+  );
 }
 
-function isDirectChildOfTemplateFor (node) {
+function isDirectChildOfTemplateFor(node) {
   while (node.parent) {
     node = node.parent;
-    if (node.tag !== 'template') {
-      return false
+    if (node.tag !== "template") {
+      return false;
     }
     if (node.for) {
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 /*  */
@@ -3908,11 +4058,11 @@ var baseDirectives = {
 
 
 
-var CodegenState = function CodegenState (options) {
+var CodegenState = function CodegenState(options) {
   this.options = options;
   this.warn = options.warn || baseWarn;
-  this.transforms = pluckModuleFunction(options.modules, 'transformCode');
-  this.dataGenFns = pluckModuleFunction(options.modules, 'genData');
+  this.transforms = pluckModuleFunction(options.modules, "transformCode");
+  this.dataGenFns = pluckModuleFunction(options.modules, "genData");
   this.directives = extend(extend({}, baseDirectives), options.directives);
   var isReservedTag = options.isReservedTag || no;
   this.maybeComponent = function (el) { return !!el.component || !isReservedTag(el.tag); };
@@ -3923,36 +4073,40 @@ var CodegenState = function CodegenState (options) {
 
 
 
-function generate (
+function generate(
   ast,
   options
 ) {
   var state = new CodegenState(options);
   // fix #11483, Root level <script> tags should not be rendered.
-  var code = ast ? (ast.tag === 'script' ? 'null' : genElement(ast, state)) : '_c("div")';
+  var code = ast
+    ? ast.tag === "script"
+      ? "null"
+      : genElement(ast, state)
+    : '_c("div")';
   return {
     render: ("with(this){return " + code + "}"),
-    staticRenderFns: state.staticRenderFns
-  }
+    staticRenderFns: state.staticRenderFns,
+  };
 }
 
-function genElement (el, state) {
+function genElement(el, state) {
   if (el.parent) {
     el.pre = el.pre || el.parent.pre;
   }
 
   if (el.staticRoot && !el.staticProcessed) {
-    return genStatic(el, state)
+    return genStatic(el, state);
   } else if (el.once && !el.onceProcessed) {
-    return genOnce(el, state)
+    return genOnce(el, state);
   } else if (el.for && !el.forProcessed) {
-    return genFor(el, state)
+    return genFor(el, state);
   } else if (el.if && !el.ifProcessed) {
-    return genIf(el, state)
-  } else if (el.tag === 'template' && !el.slotTarget && !state.pre) {
-    return genChildren(el, state) || 'void 0'
-  } else if (el.tag === 'slot') {
-    return genSlot(el, state)
+    return genIf(el, state);
+  } else if (el.tag === "template" && !el.slotTarget && !state.pre) {
+    return genChildren(el, state) || "void 0";
+  } else if (el.tag === "slot") {
+    return genSlot(el, state);
   } else {
     // component or element
     var code;
@@ -3965,18 +4119,18 @@ function genElement (el, state) {
       }
 
       var children = el.inlineTemplate ? null : genChildren(el, state, true);
-      code = "_c('" + (el.tag) + "'" + (data ? ("," + data) : '') + (children ? ("," + children) : '') + ")";
+      code = "_c('" + (el.tag) + "'" + (data ? ("," + data) : "") + (children ? ("," + children) : "") + ")";
     }
     // module transforms
     for (var i = 0; i < state.transforms.length; i++) {
       code = state.transforms[i](el, code);
     }
-    return code
+    return code;
   }
 }
 
 // hoist static sub-trees out
-function genStatic (el, state) {
+function genStatic(el, state) {
   el.staticProcessed = true;
   // Some elements (templates) need to behave differently inside of a v-pre
   // node.  All pre nodes are static roots, so we can use this as a location to
@@ -3987,75 +4141,78 @@ function genStatic (el, state) {
   }
   state.staticRenderFns.push(("with(this){return " + (genElement(el, state)) + "}"));
   state.pre = originalPreState;
-  return ("_m(" + (state.staticRenderFns.length - 1) + (el.staticInFor ? ',true' : '') + ")")
+  return ("_m(" + (state.staticRenderFns.length - 1) + (el.staticInFor ? ",true" : "") + ")");
 }
 
 // v-once
-function genOnce (el, state) {
+function genOnce(el, state) {
   el.onceProcessed = true;
   if (el.if && !el.ifProcessed) {
-    return genIf(el, state)
+    return genIf(el, state);
   } else if (el.staticInFor) {
-    var key = '';
+    var key = "";
     var parent = el.parent;
     while (parent) {
       if (parent.for) {
         key = parent.key;
-        break
+        break;
       }
       parent = parent.parent;
     }
     if (!key) {
-      process.env.NODE_ENV !== 'production' && state.warn(
-        "v-once can only be used inside v-for that is keyed. ",
-        el.rawAttrsMap['v-once']
-      );
-      return genElement(el, state)
+      process.env.NODE_ENV !== "production" &&
+        state.warn(
+          "v-once can only be used inside v-for that is keyed. ",
+          el.rawAttrsMap["v-once"]
+        );
+      return genElement(el, state);
     }
-    return ("_o(" + (genElement(el, state)) + "," + (state.onceId++) + "," + key + ")")
+    return ("_o(" + (genElement(el, state)) + "," + (state.onceId++) + "," + key + ")");
   } else {
-    return genStatic(el, state)
+    return genStatic(el, state);
   }
 }
 
-function genIf (
+function genIf(
   el,
   state,
   altGen,
   altEmpty
 ) {
   el.ifProcessed = true; // avoid recursion
-  return genIfConditions(el.ifConditions.slice(), state, altGen, altEmpty)
+  return genIfConditions(el.ifConditions.slice(), state, altGen, altEmpty);
 }
 
-function genIfConditions (
+function genIfConditions(
   conditions,
   state,
   altGen,
   altEmpty
 ) {
   if (!conditions.length) {
-    return altEmpty || '_e()'
+    return altEmpty || "_e()";
   }
 
   var condition = conditions.shift();
   if (condition.exp) {
-    return ("(" + (condition.exp) + ")?" + (genTernaryExp(condition.block)) + ":" + (genIfConditions(conditions, state, altGen, altEmpty)))
+    return ("(" + (condition.exp) + ")?" + (genTernaryExp(
+      condition.block
+    )) + ":" + (genIfConditions(conditions, state, altGen, altEmpty)));
   } else {
-    return ("" + (genTernaryExp(condition.block)))
+    return ("" + (genTernaryExp(condition.block)));
   }
 
   // v-if with v-once should generate code like (a)?_m(0):_m(1)
-  function genTernaryExp (el) {
+  function genTernaryExp(el) {
     return altGen
       ? altGen(el, state)
       : el.once
-        ? genOnce(el, state)
-        : genElement(el, state)
+      ? genOnce(el, state)
+      : genElement(el, state);
   }
 }
 
-function genFor (
+function genFor(
   el,
   state,
   altGen,
@@ -4063,38 +4220,41 @@ function genFor (
 ) {
   var exp = el.for;
   var alias = el.alias;
-  var iterator1 = el.iterator1 ? ("," + (el.iterator1)) : '';
-  var iterator2 = el.iterator2 ? ("," + (el.iterator2)) : '';
+  var iterator1 = el.iterator1 ? ("," + (el.iterator1)) : "";
+  var iterator2 = el.iterator2 ? ("," + (el.iterator2)) : "";
 
-  if (process.env.NODE_ENV !== 'production' &&
+  if (
+    process.env.NODE_ENV !== "production" &&
     state.maybeComponent(el) &&
-    el.tag !== 'slot' &&
-    el.tag !== 'template' &&
+    el.tag !== "slot" &&
+    el.tag !== "template" &&
     !el.key
   ) {
     state.warn(
       "<" + (el.tag) + " v-for=\"" + alias + " in " + exp + "\">: component lists rendered with " +
-      "v-for should have explicit keys. " +
-      "See https://vuejs.org/guide/list.html#key for more info.",
-      el.rawAttrsMap['v-for'],
+        "v-for should have explicit keys. " +
+        "See https://vuejs.org/guide/list.html#key for more info.",
+      el.rawAttrsMap["v-for"],
       true /* tip */
     );
   }
 
   el.forProcessed = true; // avoid recursion
-  return (altHelper || '_l') + "((" + exp + ")," +
+  return (
+    (altHelper || "_l") + "((" + exp + ")," +
     "function(" + alias + iterator1 + iterator2 + "){" +
-      "return " + ((altGen || genElement)(el, state)) +
-    '})'
+    "return " + ((altGen || genElement)(el, state)) +
+    "})"
+  );
 }
 
-function genData$2 (el, state) {
-  var data = '{';
+function genData$2(el, state) {
+  var data = "{";
 
   // directives first.
   // directives may mutate the el's other properties before they are generated.
   var dirs = genDirectives(el, state);
-  if (dirs) { data += dirs + ','; }
+  if (dirs) { data += dirs + ","; }
 
   // key
   if (el.key) {
@@ -4154,7 +4314,7 @@ function genData$2 (el, state) {
       data += inlineTemplate + ",";
     }
   }
-  data = data.replace(/,$/, '') + '}';
+  data = data.replace(/,$/, "") + "}";
   // v-bind dynamic argument wrap
   // v-bind with dynamic arguments must be applied using the same v-bind object
   // merge helper so that class/style/mustUseProp attrs are handled correctly.
@@ -4169,13 +4329,13 @@ function genData$2 (el, state) {
   if (el.wrapListeners) {
     data = el.wrapListeners(data);
   }
-  return data
+  return data;
 }
 
-function genDirectives (el, state) {
+function genDirectives(el, state) {
   var dirs = el.directives;
-  if (!dirs) { return }
-  var res = 'directives:[';
+  if (!dirs) { return; }
+  var res = "directives:[";
   var hasRuntime = false;
   var i, l, dir, needRuntime;
   for (i = 0, l = dirs.length; i < l; i++) {
@@ -4189,31 +4349,36 @@ function genDirectives (el, state) {
     }
     if (needRuntime) {
       hasRuntime = true;
-      res += "{name:\"" + (dir.name) + "\",rawName:\"" + (dir.rawName) + "\"" + (dir.value ? (",value:(" + (dir.value) + "),expression:" + (JSON.stringify(dir.value))) : '') + (dir.arg ? (",arg:" + (dir.isDynamicArg ? dir.arg : ("\"" + (dir.arg) + "\""))) : '') + (dir.modifiers ? (",modifiers:" + (JSON.stringify(dir.modifiers))) : '') + "},";
+      res += "{name:\"" + (dir.name) + "\",rawName:\"" + (dir.rawName) + "\"" + (dir.value
+          ? (",value:(" + (dir.value) + "),expression:" + (JSON.stringify(dir.value)))
+          : "") + (dir.arg ? (",arg:" + (dir.isDynamicArg ? dir.arg : ("\"" + (dir.arg) + "\""))) : "") + (dir.modifiers ? (",modifiers:" + (JSON.stringify(dir.modifiers))) : "") + "},";
     }
   }
   if (hasRuntime) {
-    return res.slice(0, -1) + ']'
+    return res.slice(0, -1) + "]";
   }
 }
 
-function genInlineTemplate (el, state) {
+function genInlineTemplate(el, state) {
   var ast = el.children[0];
-  if (process.env.NODE_ENV !== 'production' && (
-    el.children.length !== 1 || ast.type !== 1
-  )) {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    (el.children.length !== 1 || ast.type !== 1)
+  ) {
     state.warn(
-      'Inline-template components must have exactly one child element.',
+      "Inline-template components must have exactly one child element.",
       { start: el.start }
     );
   }
   if (ast && ast.type === 1) {
     var inlineRenderFns = generate(ast, state.options);
-    return ("inlineTemplate:{render:function(){" + (inlineRenderFns.render) + "},staticRenderFns:[" + (inlineRenderFns.staticRenderFns.map(function (code) { return ("function(){" + code + "}"); }).join(',')) + "]}")
+    return ("inlineTemplate:{render:function(){" + (inlineRenderFns.render) + "},staticRenderFns:[" + (inlineRenderFns.staticRenderFns
+      .map(function (code) { return ("function(){" + code + "}"); })
+      .join(",")) + "]}");
   }
 }
 
-function genScopedSlots (
+function genScopedSlots(
   el,
   slots,
   state
@@ -4222,15 +4387,14 @@ function genScopedSlots (
   // components with only scoped slots to skip forced updates from parent.
   // but in some cases we have to bail-out of this optimization
   // for example if the slot contains dynamic names, has v-if or v-for on them...
-  var needsForceUpdate = el.for || Object.keys(slots).some(function (key) {
-    var slot = slots[key];
-    return (
-      slot.slotTargetDynamic ||
-      slot.if ||
-      slot.for ||
-      containsSlotChild(slot) // is passing down slot from parent which may be dynamic
-    )
-  });
+  var needsForceUpdate =
+    el.for ||
+    Object.keys(slots).some(function (key) {
+      var slot = slots[key];
+      return (
+        slot.slotTargetDynamic || slot.if || slot.for || containsSlotChild(slot) // is passing down slot from parent which may be dynamic
+      );
+    });
 
   // #9534: if a component with scoped slots is inside a conditional branch,
   // it's possible for the same component to be reused but with different
@@ -4251,7 +4415,7 @@ function genScopedSlots (
         parent.for
       ) {
         needsForceUpdate = true;
-        break
+        break;
       }
       if (parent.if) {
         needsKey = true;
@@ -4262,56 +4426,53 @@ function genScopedSlots (
 
   var generatedSlots = Object.keys(slots)
     .map(function (key) { return genScopedSlot(slots[key], state); })
-    .join(',');
+    .join(",");
 
-  return ("scopedSlots:_u([" + generatedSlots + "]" + (needsForceUpdate ? ",null,true" : "") + (!needsForceUpdate && needsKey ? (",null,false," + (hash(generatedSlots))) : "") + ")")
+  return ("scopedSlots:_u([" + generatedSlots + "]" + (needsForceUpdate ? ",null,true" : "") + (!needsForceUpdate && needsKey ? (",null,false," + (hash(generatedSlots))) : "") + ")");
 }
 
 function hash(str) {
   var hash = 5381;
   var i = str.length;
-  while(i) {
+  while (i) {
     hash = (hash * 33) ^ str.charCodeAt(--i);
   }
-  return hash >>> 0
+  return hash >>> 0;
 }
 
-function containsSlotChild (el) {
+function containsSlotChild(el) {
   if (el.type === 1) {
-    if (el.tag === 'slot') {
-      return true
+    if (el.tag === "slot") {
+      return true;
     }
-    return el.children.some(containsSlotChild)
+    return el.children.some(containsSlotChild);
   }
-  return false
+  return false;
 }
 
-function genScopedSlot (
-  el,
-  state
-) {
-  var isLegacySyntax = el.attrsMap['slot-scope'];
+function genScopedSlot(el, state) {
+  var isLegacySyntax = el.attrsMap["slot-scope"];
   if (el.if && !el.ifProcessed && !isLegacySyntax) {
-    return genIf(el, state, genScopedSlot, "null")
+    return genIf(el, state, genScopedSlot, "null");
   }
   if (el.for && !el.forProcessed) {
-    return genFor(el, state, genScopedSlot)
+    return genFor(el, state, genScopedSlot);
   }
-  var slotScope = el.slotScope === emptySlotScopeToken
-    ? ""
-    : String(el.slotScope);
-  var fn = "function(" + slotScope + "){" +
-    "return " + (el.tag === 'template'
-      ? el.if && isLegacySyntax
-        ? ("(" + (el.if) + ")?" + (genChildren(el, state) || 'undefined') + ":undefined")
-        : genChildren(el, state) || 'undefined'
-      : genElement(el, state)) + "}";
+  var slotScope =
+    el.slotScope === emptySlotScopeToken ? "" : String(el.slotScope);
+  var fn =
+    "function(" + slotScope + "){" +
+    "return " + (el.tag === "template"
+        ? el.if && isLegacySyntax
+          ? ("(" + (el.if) + ")?" + (genChildren(el, state) || "undefined") + ":undefined")
+          : genChildren(el, state) || "undefined"
+        : genElement(el, state)) + "}";
   // reverse proxy v-slot without scope on this.$slots
   var reverseProxy = slotScope ? "" : ",proxy:true";
-  return ("{key:" + (el.slotTarget || "\"default\"") + ",fn:" + fn + reverseProxy + "}")
+  return ("{key:" + (el.slotTarget || "\"default\"") + ",fn:" + fn + reverseProxy + "}");
 }
 
-function genChildren (
+function genChildren(
   el,
   state,
   checkSkip,
@@ -4322,21 +4483,24 @@ function genChildren (
   if (children.length) {
     var el$1 = children[0];
     // optimize single v-for
-    if (children.length === 1 &&
+    if (
+      children.length === 1 &&
       el$1.for &&
-      el$1.tag !== 'template' &&
-      el$1.tag !== 'slot'
+      el$1.tag !== "template" &&
+      el$1.tag !== "slot"
     ) {
       var normalizationType = checkSkip
-        ? state.maybeComponent(el$1) ? ",1" : ",0"
+        ? state.maybeComponent(el$1)
+          ? ",1"
+          : ",0"
         : "";
-      return ("" + ((altGenElement || genElement)(el$1, state)) + normalizationType)
+      return ("" + ((altGenElement || genElement)(el$1, state)) + normalizationType);
     }
     var normalizationType$1 = checkSkip
       ? getNormalizationType(children, state.maybeComponent)
       : 0;
     var gen = altGenNode || genNode;
-    return ("[" + (children.map(function (c) { return gen(c, state); }).join(',')) + "]" + (normalizationType$1 ? ("," + normalizationType$1) : ''))
+    return ("[" + (children.map(function (c) { return gen(c, state); }).join(",")) + "]" + (normalizationType$1 ? ("," + normalizationType$1) : ""));
   }
 }
 
@@ -4344,7 +4508,7 @@ function genChildren (
 // 0: no normalization needed
 // 1: simple normalization needed (possible 1-level deep nested array)
 // 2: full normalization needed
-function getNormalizationType (
+function getNormalizationType(
   children,
   maybeComponent
 ) {
@@ -4352,58 +4516,66 @@ function getNormalizationType (
   for (var i = 0; i < children.length; i++) {
     var el = children[i];
     if (el.type !== 1) {
-      continue
+      continue;
     }
-    if (needsNormalization(el) ||
-        (el.ifConditions && el.ifConditions.some(function (c) { return needsNormalization(c.block); }))) {
+    if (
+      needsNormalization(el) ||
+      (el.ifConditions &&
+        el.ifConditions.some(function (c) { return needsNormalization(c.block); }))
+    ) {
       res = 2;
-      break
+      break;
     }
-    if (maybeComponent(el) ||
-        (el.ifConditions && el.ifConditions.some(function (c) { return maybeComponent(c.block); }))) {
+    if (
+      maybeComponent(el) ||
+      (el.ifConditions && el.ifConditions.some(function (c) { return maybeComponent(c.block); }))
+    ) {
       res = 1;
     }
   }
-  return res
+  return res;
 }
 
-function needsNormalization (el) {
-  return el.for !== undefined || el.tag === 'template' || el.tag === 'slot'
+function needsNormalization(el) {
+  return el.for !== undefined || el.tag === "template" || el.tag === "slot";
 }
 
-function genNode (node, state) {
+function genNode(node, state) {
   if (node.type === 1) {
-    return genElement(node, state)
+    return genElement(node, state);
   } else if (node.type === 3 && node.isComment) {
-    return genComment(node)
+    return genComment(node);
   } else {
-    return genText(node)
+    return genText(node);
   }
 }
 
-function genText (text) {
+function genText(text) {
   return ("_v(" + (text.type === 2
-    ? text.expression // no need for () because already wrapped in _s()
-    : transformSpecialNewlines(JSON.stringify(text.text))) + ")")
+      ? text.expression // no need for () because already wrapped in _s()
+      : transformSpecialNewlines(JSON.stringify(text.text))) + ")");
 }
 
-function genComment (comment) {
-  return ("_e(" + (JSON.stringify(comment.text)) + ")")
+function genComment(comment) {
+  return ("_e(" + (JSON.stringify(comment.text)) + ")");
 }
 
-function genSlot (el, state) {
+function genSlot(el, state) {
   var slotName = el.slotName || '"default"';
   var children = genChildren(el, state);
-  var res = "_t(" + slotName + (children ? (",function(){return " + children + "}") : '');
-  var attrs = el.attrs || el.dynamicAttrs
-    ? genProps((el.attrs || []).concat(el.dynamicAttrs || []).map(function (attr) { return ({
-        // slot props are camelized
-        name: camelize(attr.name),
-        value: attr.value,
-        dynamic: attr.dynamic
-      }); }))
-    : null;
-  var bind$$1 = el.attrsMap['v-bind'];
+  var res = "_t(" + slotName + (children ? (",function(){return " + children + "}") : "");
+  var attrs =
+    el.attrs || el.dynamicAttrs
+      ? genProps(
+          (el.attrs || []).concat(el.dynamicAttrs || []).map(function (attr) { return ({
+            // slot props are camelized
+            name: camelize(attr.name),
+            value: attr.value,
+            dynamic: attr.dynamic,
+          }); })
+        )
+      : null;
+  var bind$$1 = el.attrsMap["v-bind"];
   if ((attrs || bind$$1) && !children) {
     res += ",null";
   }
@@ -4411,22 +4583,22 @@ function genSlot (el, state) {
     res += "," + attrs;
   }
   if (bind$$1) {
-    res += (attrs ? '' : ',null') + "," + bind$$1;
+    res += (attrs ? "" : ",null") + "," + bind$$1;
   }
-  return res + ')'
+  return res + ")";
 }
 
 // componentName is el.component, take it as argument to shun flow's pessimistic refinement
-function genComponent (
+function genComponent(
   componentName,
   el,
   state
 ) {
   var children = el.inlineTemplate ? null : genChildren(el, state, true);
-  return ("_c(" + componentName + "," + (genData$2(el, state)) + (children ? ("," + children) : '') + ")")
+  return ("_c(" + componentName + "," + (genData$2(el, state)) + (children ? ("," + children) : "") + ")");
 }
 
-function genProps (props) {
+function genProps(props) {
   var staticProps = "";
   var dynamicProps = "";
   for (var i = 0; i < props.length; i++) {
@@ -4440,17 +4612,15 @@ function genProps (props) {
   }
   staticProps = "{" + (staticProps.slice(0, -1)) + "}";
   if (dynamicProps) {
-    return ("_d(" + staticProps + ",[" + (dynamicProps.slice(0, -1)) + "])")
+    return ("_d(" + staticProps + ",[" + (dynamicProps.slice(0, -1)) + "])");
   } else {
-    return staticProps
+    return staticProps;
   }
 }
 
 // #3895, #4268
-function transformSpecialNewlines (text) {
-  return text
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029')
+function transformSpecialNewlines(text) {
+  return text.replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 }
 
 /*  */
@@ -4749,9 +4919,9 @@ function createCompileToFunctionFn (compile) {
 
 /*  */
 
-function createCompilerCreator (baseCompile) {
-  return function createCompiler (baseOptions) {
-    function compile (
+function createCompilerCreator(baseCompile) {
+  return function createCompiler(baseOptions) {
+    function compile(
       template,
       options
     ) {
@@ -4764,7 +4934,10 @@ function createCompilerCreator (baseCompile) {
       };
 
       if (options) {
-        if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
+        if (
+          process.env.NODE_ENV !== "production" &&
+          options.outputSourceRange
+        ) {
           // $flow-disable-line
           var leadingSpaceLength = template.match(/^\s*/)[0].length;
 
@@ -4783,8 +4956,9 @@ function createCompilerCreator (baseCompile) {
         }
         // merge custom modules
         if (options.modules) {
-          finalOptions.modules =
-            (baseOptions.modules || []).concat(options.modules);
+          finalOptions.modules = (baseOptions.modules || []).concat(
+            options.modules
+          );
         }
         // merge custom directives
         if (options.directives) {
@@ -4795,7 +4969,7 @@ function createCompilerCreator (baseCompile) {
         }
         // copy other options
         for (var key in options) {
-          if (key !== 'modules' && key !== 'directives') {
+          if (key !== "modules" && key !== "directives") {
             finalOptions[key] = options[key];
           }
         }
@@ -4803,20 +4977,21 @@ function createCompilerCreator (baseCompile) {
 
       finalOptions.warn = warn;
 
+      // compiled: { ast, rende, staticRenderFns}
       var compiled = baseCompile(template.trim(), finalOptions);
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== "production") {
         detectErrors(compiled.ast, warn);
       }
       compiled.errors = errors;
       compiled.tips = tips;
-      return compiled
+      return compiled;
     }
 
     return {
       compile: compile,
-      compileToFunctions: createCompileToFunctionFn(compile)
-    }
-  }
+      compileToFunctions: createCompileToFunctionFn(compile),
+    };
+  };
 }
 
 /*  */
@@ -4824,20 +4999,23 @@ function createCompilerCreator (baseCompile) {
 // `createCompilerCreator` allows creating compilers that use alternative
 // parser/optimizer/codegen, e.g the SSR optimizing compiler.
 // Here we just export a default compiler using the default parts.
-var createCompiler = createCompilerCreator(function baseCompile (
+var createCompiler = createCompilerCreator(function baseCompile(
   template,
   options
 ) {
+  // 1. 把 template 模版转换成模板 AST
   var ast = parse(template.trim(), options);
   if (options.optimize !== false) {
+    // 2. 优化抽象语法树
     optimize(ast, options);
   }
+  // 3. 把抽象语法树生成字符串形式的 js 代码
   var code = generate(ast, options);
   return {
     ast: ast,
-    render: code.render,
-    staticRenderFns: code.staticRenderFns
-  }
+    render: code.render, // 字符串形式 js 代码
+    staticRenderFns: code.staticRenderFns,
+  };
 });
 
 /*  */
@@ -5396,3 +5574,4 @@ exports.compileToFunctions = compileToFunctions;
 exports.ssrCompile = compile$1;
 exports.ssrCompileToFunctions = compileToFunctions$1;
 exports.generateCodeFrame = generateCodeFrame;
+//# sourceMappingURL=build.js.map

@@ -40,7 +40,7 @@ const componentVNodeHooks = {
       const mountedNode: any = vnode; // work around flow
       componentVNodeHooks.prepatch(mountedNode, mountedNode);
     } else {
-      // 创建渲染组件实例(和 new Vue 逻辑一致, 只不过属于 VueComponent 的实例)
+      // 根据组件占位符 vnode 创建渲染组件实例(和 new Vue 逻辑一致, 只不过属于 VueComponent 的实例)
       const child = (vnode.componentInstance = createComponentInstanceForVnode(
         vnode,
         activeInstance
@@ -50,9 +50,12 @@ const componentVNodeHooks = {
     }
   },
 
+  // 组件更新
   prepatch(oldVnode: MountedComponentVNode, vnode: MountedComponentVNode) {
     const options = vnode.componentOptions;
+    // 渲染组件实例
     const child = (vnode.componentInstance = oldVnode.componentInstance);
+    // 渲染组件更新
     updateChildComponent(
       child,
       options.propsData, // updated props
@@ -205,7 +208,7 @@ export function createComponent(
   return vnode;
 }
 
-// 创建渲染组件(渲染内容)实例
+// 根据组件占位符 vnode 创建渲染组件(渲染内容)实例
 export function createComponentInstanceForVnode(
   // we know it's MountedComponentVNode but flow doesn't
   vnode: any,
@@ -214,7 +217,7 @@ export function createComponentInstanceForVnode(
 ): Component {
   const options: InternalComponentOptions = {
     _isComponent: true, // 渲染内容
-    _parentVnode: vnode,
+    _parentVnode: vnode, // 组件占位符 vnode
     parent,
   };
   // check inline-template render functions

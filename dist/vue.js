@@ -934,7 +934,7 @@
    */
   var Observer = function Observer(value) {
     this.value = value;
-    // 当前属性的依赖对象
+    // 当前对象的的依赖(watcher)
     this.dep = new Dep();
     // 初始化实例的 vmCount 为0
     this.vmCount = 0;
@@ -1047,7 +1047,7 @@
     customSetter,
     shallow // 是否递归观察对象
   ) {
-    // 依赖对象实例, 当前属性所依赖的 watcher
+    // 当前属性的依赖(watcher)
     var dep = new Dep();
     // 获取 obj.key 的属性描述符对象
     var property = Object.getOwnPropertyDescriptor(obj, key);
@@ -2233,23 +2233,31 @@
 
   /*  */
 
-  var normalizeEvent = cached(function (name) {
-    var passive = name.charAt(0) === '&';
-    name = passive ? name.slice(1) : name;
-    var once$$1 = name.charAt(0) === '~'; // Prefixed last, checked first
-    name = once$$1 ? name.slice(1) : name;
-    var capture = name.charAt(0) === '!';
-    name = capture ? name.slice(1) : name;
-    return {
-      name: name,
-      once: once$$1,
-      capture: capture,
-      passive: passive
+  // 解析事件修饰符
+  var normalizeEvent = cached(
+    function (
+      name
+    ) {
+      var passive = name.charAt(0) === "&";
+      name = passive ? name.slice(1) : name;
+      var once$$1 = name.charAt(0) === "~"; // Prefixed last, checked first
+      name = once$$1 ? name.slice(1) : name;
+      var capture = name.charAt(0) === "!";
+      name = capture ? name.slice(1) : name;
+      return {
+        name: name,
+        once: once$$1,
+        capture: capture,
+        passive: passive,
+      };
     }
-  });
+  );
 
-  function createFnInvoker (fns, vm) {
-    function invoker () {
+  function createFnInvoker(
+    fns,
+    vm
+  ) {
+    function invoker() {
       var arguments$1 = arguments;
 
       var fns = invoker.fns;
@@ -2260,14 +2268,14 @@
         }
       } else {
         // return handler return value for single handlers
-        return invokeWithErrorHandling(fns, null, arguments, vm, "v-on handler")
+        return invokeWithErrorHandling(fns, null, arguments, vm, "v-on handler");
       }
     }
     invoker.fns = fns;
-    return invoker
+    return invoker;
   }
 
-  function updateListeners (
+  function updateListeners(
     on,
     oldOn,
     add,
@@ -2280,12 +2288,14 @@
       def$$1 = cur = on[name];
       old = oldOn[name];
       event = normalizeEvent(name);
+
       if (isUndef(cur)) {
         warn(
-          "Invalid handler for event \"" + (event.name) + "\": got " + String(cur),
-          vm
-        );
+            "Invalid handler for event \"" + (event.name) + "\": got " + String(cur),
+            vm
+          );
       } else if (isUndef(old)) {
+        // 旧事件中没有需要新增新事件
         if (isUndef(cur.fns)) {
           cur = on[name] = createFnInvoker(cur, vm);
         }
@@ -2299,6 +2309,7 @@
       }
     }
     for (name in oldOn) {
+      // 未找到新事件, 需要删除旧事件
       if (isUndef(on[name])) {
         event = normalizeEvent(name);
         remove$$1(event.name, oldOn[name], event.capture);
@@ -2508,10 +2519,12 @@
   function initInjections(vm) {
     var result = resolveInject(vm.$options.inject, vm);
     if (result) {
+      //禁止转换成响应式
       toggleObserving(false);
       Object.keys(result).forEach(function (key) {
         /* istanbul ignore else */
         {
+          // 将 provide 的数据代理到组件实例上
           defineReactive$$1(vm, key, result[key], function () {
             warn(
               "Avoid mutating an injected value directly since the changes will be " +
@@ -3189,6 +3202,7 @@
   /*  */
 
   // inline hooks to be invoked on component VNodes during patch
+  // 组件钩子函数(在 patch 阶段会执行)
   var componentVNodeHooks = {
     // 组件挂载
     init: function init(vnode, hydrating) {
@@ -3201,19 +3215,22 @@
         var mountedNode = vnode; // work around flow
         componentVNodeHooks.prepatch(mountedNode, mountedNode);
       } else {
-        // 创建子组件实例
+        // 根据组件占位符 vnode 创建渲染组件实例(和 new Vue 逻辑一致, 只不过属于 VueComponent 的实例)
         var child = (vnode.componentInstance = createComponentInstanceForVnode(
           vnode,
           activeInstance
         ));
-        // 挂载组件
+        // 生成 DOM 并储存到 vnode.elm, 如果有子组件, 会继续进行子组件的初始化
         child.$mount(hydrating ? vnode.elm : undefined, hydrating);
       }
     },
 
+    // 组件更新
     prepatch: function prepatch(oldVnode, vnode) {
       var options = vnode.componentOptions;
+      // 渲染组件实例
       var child = (vnode.componentInstance = oldVnode.componentInstance);
+      // 渲染组件更新
       updateChildComponent(
         child,
         options.propsData, // updated props
@@ -3258,7 +3275,7 @@
 
   var hooksToMerge = Object.keys(componentVNodeHooks);
 
-  // 创建组件的 vnode
+  // 创建组件的占位符 vnode, 在 patch 阶段使用 init 钩子初始化渲染组件实列, 并生成 DOM
   function createComponent(
     Ctor,
     data,
@@ -3270,10 +3287,10 @@
       return;
     }
 
-    var baseCtor = context.$options._base; // Vue
+    var baseCtor = context.$options._base; // _base === Vue
 
     // plain options object: turn it into a constructor
-    // 如果 Ctor 不是构造函数是对象, 使用 Vue.extend 创造一个子组件的构造函数
+    // 1.如果 Ctor 是对象, 使用 Vue.extend 创造组件的构造函数(Vue 的子类)
     if (isObject(Ctor)) {
       Ctor = baseCtor.extend(Ctor);
     }
@@ -3339,11 +3356,12 @@
     }
 
     // install component management hooks onto the placeholder node
-    // 注入组件钩子函数
+    // 2.注入组件钩子函数(patch 阶段执行)
     installComponentHooks(data);
 
     // return a placeholder vnode
     var name = Ctor.options.name || tag;
+    // 3.创建占位符 vnode(没有 children)
     var vnode = new VNode(
       ("vue-component-" + (Ctor.cid) + (name ? ("-" + name) : "")),
       data,
@@ -3358,6 +3376,7 @@
     return vnode;
   }
 
+  // 根据组件占位符 vnode 创建渲染组件(渲染内容)实例
   function createComponentInstanceForVnode(
     // we know it's MountedComponentVNode but flow doesn't
     vnode,
@@ -3365,8 +3384,8 @@
     parent
   ) {
     var options = {
-      _isComponent: true,
-      _parentVnode: vnode,
+      _isComponent: true, // 渲染内容
+      _parentVnode: vnode, // 组件占位符 vnode
       parent: parent,
     };
     // check inline-template render functions
@@ -3519,7 +3538,7 @@
             context
           );
         }
-        // 创建标签 vnode
+        // 创建元素 vnode
         vnode = new VNode(
           config.parsePlatformTagName(tag),
           data,
@@ -3530,8 +3549,10 @@
         );
       } else if (
         (!data || !data.pre) &&
+        // Ctor: 注册组件的构造函数
         isDef((Ctor = resolveAsset(context.$options, "components", tag)))
       ) {
+        // 是注册的组件
         // 创建组件 vnode
         vnode = createComponent(Ctor, data, context, children, tag);
       } else {
@@ -3609,7 +3630,7 @@
     // normalization is always applied for the public version, used in
     // user-written render functions.
 
-    // 对于手写render 函数进行渲染的方法, 也是 h 函数, 返回 vnode
+    // 对于手写 render 函数进行渲染的方法, 也是 h 函数, 返回 vnode
     vm.$createElement = function (a, b, c, d) { return createElement(vm, a, b, c, d, true); };
 
     // $attrs & $listeners are exposed for easier HOC creation.
@@ -3716,7 +3737,7 @@
         vnode = createEmptyVNode();
       }
       // set parent
-      // 渲染 vnode.parent 指向占位符 vnode
+      // 渲染 vnode.parent 指向占位符 vnode(_parentVnode)
       vnode.parent = _parentVnode;
       return vnode;
     };
@@ -4092,11 +4113,10 @@
       // Vue.prototype.__patch__ is injected in entry points
       // based on the rendering backend used.
       if (!prevVnode) {
-        // initial render 首次渲染
-        // vm.$el：真实 DOM
+        // 应用初始化或者组件初始化
         vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */);
       } else {
-        // updates 数据更新
+        // 组件更新(或者使用 Vue.component 创建组件, 此时 prevVnode 为空)
         vm.$el = vm.__patch__(prevVnode, vnode);
       }
       restoreActiveInstance();
@@ -4196,7 +4216,7 @@
         }
       }
     }
-    // 生命周期钩子: beforeMount
+    // 生命周期钩子
     callHook(vm, "beforeMount");
 
     var updateComponent;
@@ -4229,7 +4249,7 @@
     // we set this to vm._watcher inside the watcher's constructor
     // since the watcher's initial patch may call $forceUpdate (e.g. inside child
     // component's mounted hook), which relies on vm._watcher being already defined
-    // 创建组件 watcher, 初始化时会执行 updateComponent
+    // 创建组件 watcher, 初始化时会执行 updateComponent 执行组件挂载
     new Watcher(
       vm,
       updateComponent,
@@ -4241,7 +4261,7 @@
           }
         },
       },
-      true /* isRenderWatcher */
+      true /* isRenderWatcher 代表渲染 watcher */
     );
     hydrating = false;
 
@@ -4249,12 +4269,13 @@
     // mounted is called for render-created child components in its inserted hook
     if (vm.$vnode == null) {
       vm._isMounted = true;
-      // 生命周期钩子: mounted
+      // 生命周期钩子
       callHook(vm, "mounted");
     }
     return vm;
   }
 
+  // 渲染组件更新
   function updateChildComponent(
     vm,
     propsData,
@@ -4306,6 +4327,7 @@
     vm.$listeners = listeners || emptyObject;
 
     // update props
+    // 更新 props
     if (propsData && vm.$options.props) {
       toggleObserving(false);
       var props = vm._props;
@@ -4455,6 +4477,7 @@
    */
   // 触发所有 watcher 更新函数
   function flushSchedulerQueue() {
+    // 更新触发任务时间点(标识: 一次事件循环的开始节点)
     currentFlushTimestamp = getNow();
     flushing = true;
     var watcher, id;
@@ -4474,7 +4497,7 @@
     // 在处理 watcher 队列时, 可能有新的 watcher 添加进来
     for (index = 0; index < queue.length; index++) {
       watcher = queue[index];
-      // 触发 beforeUpdate
+      // 生命周期 beforeUpdate
       if (watcher.before) {
         watcher.before();
       }
@@ -4506,6 +4529,7 @@
 
     // call component updated and activated hooks
     callActivatedHooks(activatedQueue);
+    // 生命周期: updated
     callUpdatedHooks(updatedQueue);
 
     // devtool hook
@@ -4516,6 +4540,7 @@
   }
 
   function callUpdatedHooks(queue) {
+    // 从后向前执行 updated
     var i = queue.length;
     while (i--) {
       var watcher = queue[i];
@@ -4599,10 +4624,11 @@
     vm,
     expOrFn, // 更新函数或者表达式, 如果是渲染 watcher: updateComponent; computed 对应 get函数, watch 对应监听目标(字符串, 函数)
     cb, // 回调函数, 例如 watch 的回调函数
-    options, // 配置对象, 在使用 watch 时用到
+    options, // 配置对象, 在使用 watch 或者渲染组件时用到
     isRenderWatcher // 是否是渲染 watcher, 只有组件更新时渲染函数
   ) {
     this.vm = vm;
+    // 渲染 watcher(组件更新)
     if (isRenderWatcher) {
       vm._watcher = this;
     }
@@ -4611,10 +4637,10 @@
     // options
     if (options) {
       this.deep = !!options.deep; // watch 是否深度监听
-      this.user = !!options.user; // 在使用 watch 时标记是用户 watcher
+      this.user = !!options.user; // 用户 watcher
       this.lazy = !!options.lazy; // 是否懒加载, 计算属性(true)
       this.sync = !!options.sync;
-      this.before = options.before;
+      this.before = options.before; // 渲染组件 beforeUpdate
     } else {
       this.deep = this.user = this.lazy = this.sync = false;
     }
@@ -4622,10 +4648,10 @@
     this.id = ++uid$2; // uid for batching
     this.active = true;
     this.dirty = this.lazy; // for lazy watchers
-    this.deps = [];
-    this.newDeps = [];
-    this.depIds = new _Set();
-    this.newDepIds = new _Set();
+    this.deps = []; // 储存之前的 dep
+    this.newDeps = []; // 储存本次新增的 dep
+    this.depIds = new _Set(); // 储存之前的 dep id
+    this.newDepIds = new _Set(); // 储存本次新增的 dep id
     this.expression =
       expOrFn.toString();
     // parse expression for getter
@@ -4668,6 +4694,7 @@
     } finally {
       // "touch" every property so they are all tracked as
       // dependencies for deep watching
+      // 触发每一个子属性, 以达到深度监听
       if (this.deep) {
         traverse(value);
       }
@@ -4682,12 +4709,12 @@
    */
   Watcher.prototype.addDep = function addDep (dep) {
     var id = dep.id;
+    // 如果本次 dep id 列表没有当前的 dep, 才添加本次 dep 列表
     if (!this.newDepIds.has(id)) {
       this.newDepIds.add(id);
-      // watcher 中也添加 dep
       this.newDeps.push(dep);
+      // 如果储存 dep id列表没有当前的 dep, 才添加储存列表
       if (!this.depIds.has(id)) {
-        // 将当前 watcher 添加到 dep 中
         dep.addSub(this);
       }
     }
@@ -4696,20 +4723,26 @@
   /**
    * Clean up for dependency collection.
    */
+  // 清理本次没有使用到的 dep 的 watcher
   Watcher.prototype.cleanupDeps = function cleanupDeps () {
     var i = this.deps.length;
     while (i--) {
       var dep = this.deps[i];
+      // 如果之前的 dep 中没有本次新增的 dep, 将其删除, 说明本次更新没有使用到
       if (!this.newDepIds.has(dep.id)) {
         dep.removeSub(this);
       }
     }
     var tmp = this.depIds;
+    // 更新 dep id 为最新的
     this.depIds = this.newDepIds;
+    // 清除最新的 dep id
     this.newDepIds = tmp;
     this.newDepIds.clear();
     tmp = this.deps;
+    // 更新 dep 为最新的
     this.deps = this.newDeps;
+    // 清除最新的 dep
     this.newDeps = tmp;
     this.newDeps.length = 0;
   };
@@ -4754,6 +4787,7 @@
         // 是否是侦听器 watch
         if (this.user) {
           var info = "callback for watcher \"" + (this.expression) + "\"";
+          // 调用 watch 回调
           invokeWithErrorHandling(
             this.cb,
             this.vm,
@@ -4827,8 +4861,8 @@
 
   function initState(vm) {
     // 初始化数据的顺序: props => methods => data => computed => watch
-
-    vm._watchers = []; // 储存当前组件所有的 watcher 实例(渲染, computed, watch)
+    // 储存当前组件所有的 watcher 实例(渲染, computed, watch)
+    vm._watchers = [];
     var opts = vm.$options;
     if (opts.props) { initProps(vm, opts.props); } // props 数据转换成响应式， 注入到 vm (组件实例)
     if (opts.methods) { initMethods(vm, opts.methods); } // 判断方法名在 props 中是否重复
@@ -4869,7 +4903,7 @@
             vm
           );
         }
-        // 将 props 中的数据转换成响应式的
+        // 将 props 代理到组件实例上
         defineReactive$$1(props, key, value, function () {
           if (!isRoot && !isUpdatingChildComponent) {
             warn(
@@ -4886,7 +4920,7 @@
       // during Vue.extend(). We only need to proxy props defined at
       // instantiation here.
 
-      // 将 props 中的数据注入到 vm 上
+      // 将 props 代理到 _props 上
       if (!(key in vm)) {
         proxy(vm, "_props", key);
       }
@@ -4975,7 +5009,7 @@
           vm,
           getter || noop,
           noop,
-          computedWatcherOptions
+          computedWatcherOptions // { lazy: true }
         );
       }
 
@@ -5197,6 +5231,7 @@
       // a flag to avoid this being observed
       vm._isVue = true;
       // merge options
+      // _isComponent 代表渲染内容的组件
       if (options && options._isComponent) {
         // optimize internal component instantiation
         // since dynamic options merging is pretty slow, and none of the
@@ -5223,15 +5258,15 @@
       // vm 的编译 render 初始化
       // $slots/$scopedSlots/_c/$createElement/$attrs/$listeners
       initRender(vm);
-      // beforeCreate 生命钩子的回调
+      // 生命钩子
       callHook(vm, "beforeCreate");
-      // 把 inject 的成员注入到 vm, 先注册 inject, 方便 data/props 使用
+      // 把 inject 的成员注入到 vm, 并转成响应式, 先注册 inject, 方便 data/props 使用
       initInjections(vm); // resolve injections before data/props
       // 初始化 vm 的状态数据, _props/methods/_data/computed/watch ,注入到 vm (组件实例, 并转换成响应式)
       initState(vm);
       // 初始化 porvide
       initProvide(vm); // resolve provide after data/props
-      // created 生命钩子的回调
+      // 生命钩子
       callHook(vm, "created");
 
       /* istanbul ignore if */
@@ -5312,7 +5347,11 @@
     }
     this._init(options);
   }
-  // 初始化 Vue 的实例成员, 与平台无关
+
+  /**
+   * 初始化 Vue 的实例成员, 与平台无关
+   */
+
   // 注册 vm 的 _init 方法, 初始化 vm
   initMixin(Vue);
   // 注册 vm 的 $data/$props/$set/$delete/$watch
@@ -5398,6 +5437,7 @@
       Sub.prototype = Object.create(Super.prototype);
       Sub.prototype.constructor = Sub;
 
+      // 组件 id
       Sub.cid = cid++;
       Sub.options = mergeOptions(Super.options, extendOptions);
       Sub["super"] = Super;
@@ -6186,6 +6226,7 @@
 
     var creatingElmInVPre = 0;
 
+    // 递归创建真实 dom(子节点) 并插入到父元素
     function createElm(
       vnode,
       insertedVnodeQueue,
@@ -6205,7 +6246,7 @@
       }
 
       vnode.isRootInsert = !nested; // for transition enter check
-      // 处理组件节点(此时的vnode是占位符, 需要初始化内部的组件实例并挂载)
+      // 初始化组件节点并挂载(此时是占位符 vnode, 需要初始化内部的组件实例并挂载)
       if (createComponent(vnode, insertedVnodeQueue, parentElm, refElm)) {
         return;
       }
@@ -6213,7 +6254,7 @@
       var data = vnode.data;
       var children = vnode.children;
       var tag = vnode.tag;
-      // html 标签节点
+      // 字符串标签节点
       if (isDef(tag)) {
         {
           if (data && data.pre) {
@@ -6240,6 +6281,7 @@
         {
           // 先递归子节点, 将子节点转换成真实 dom 节点并插入到父元素
           createChildren(vnode, children, insertedVnodeQueue);
+          // 如果是组件占位符节点, 触发 create 钩子
           if (isDef(data)) {
             invokeCreateHooks(vnode, insertedVnodeQueue);
           }
@@ -6262,11 +6304,13 @@
     }
 
     function createComponent(vnode, insertedVnodeQueue, parentElm, refElm) {
+      // 占位符 vnode 会被注入组件钩子: init, prepatch, insert, destroy
       var i = vnode.data;
       if (isDef(i)) {
         var isReactivated = isDef(vnode.componentInstance) && i.keepAlive;
         if (isDef((i = i.hook)) && isDef((i = i.init))) {
-          i(vnode, false /* hydrating */); // 初始化组件(init)
+          // 初始化渲染组件 vnode.componentInstance(init), 生成 DOM 挂载到 vnode.elm
+          i(vnode, false /* hydrating */);
         }
         // after calling the init hook, if the vnode is a child component
         // it should've created a child instance and mounted it. the child
@@ -6275,7 +6319,7 @@
         if (isDef(vnode.componentInstance)) {
           // 调用组件钩子函数(初始化属性/事件/样式)
           initComponent(vnode, insertedVnodeQueue);
-          // 把组件对应的 DOM 插入到父元素中
+          // 把组件对应的 DOM 插入到父元素中(此时组件(组件的子组件) DOM 已经生成)
           insert(parentElm, vnode.elm, refElm);
           if (isTrue(isReactivated)) {
             reactivateComponent(vnode, insertedVnodeQueue, parentElm, refElm);
@@ -6697,6 +6741,7 @@
       index,
       removeOnly
     ) {
+      // 新旧 vnode 一样, 退出 patch
       if (oldVnode === vnode) {
         return;
       }
@@ -6705,7 +6750,7 @@
         // clone reused vnode
         vnode = ownerArray[index] = cloneVNode(vnode);
       }
-      // 获取老节点的父元素
+      // 获取旧节点的父元素
       var elm = (vnode.elm = oldVnode.elm);
 
       if (isTrue(oldVnode.isAsyncPlaceholder)) {
@@ -6734,6 +6779,7 @@
 
       var i;
       var data = vnode.data;
+      // 更新组件(updateChildComponent)
       if (isDef(data) && isDef((i = data.hook)) && isDef((i = i.prepatch))) {
         i(oldVnode, vnode);
       }
@@ -6918,7 +6964,7 @@
       }
     }
 
-    // 新旧 vnode 打补丁
+    // 新旧 vnode 对比打补丁
     return function patch(oldVnode, vnode, hydrating, removeOnly) {
       // 新 vnode 不存在
       if (isUndef(vnode)) {
@@ -6929,16 +6975,16 @@
 
       var isInitialPatch = false;
       var insertedVnodeQueue = []; // 新插入 vnode 队列
-      // 老的 vnode 不存在(初始化阶段)
+
+      // 当使用 Vue.component 创建组件时oldVnode 为空
       if (isUndef(oldVnode)) {
         // empty mount (likely as component), create new root element
         // 创建组件但是并没有挂载时(组件初始化)
         isInitialPatch = true;
-        // 创建元素, 但不挂载
+        // 递归创建元素(子元素), 但不挂载到页面, DOM 储存到 vnode.elm
         createElm(vnode, insertedVnodeQueue);
       } else {
-        // 更新阶段
-        // 是否是真实的 dom 元素, 初始化时 oldVnode 传入的是真实 dom #app
+        // 是否是真实的 dom 元素, 应用初始化时 oldVnode 传入的是真实 dom #app
         var isRealElement = isDef(oldVnode.nodeType);
         // 如果不是真实 dom, 并且新旧 vnode 相同(key, select选择器), 则进行 diff 算法对比
         if (!isRealElement && sameVnode(oldVnode, vnode)) {
@@ -6946,8 +6992,7 @@
           // 更新操作, diff 算法
           patchVnode(oldVnode, vnode, insertedVnodeQueue, null, null, removeOnly);
         } else {
-          // 初始化
-          // oldVnode 传入的是真实 dom => #app
+          // 应用初始化 => oldVnode 传入的是真实 dom => #app
           if (isRealElement) {
             // mounting to a real element
             // check if this is server-rendered content and if we can perform
@@ -6978,7 +7023,7 @@
 
           // replacing existing element
           var oldElm = oldVnode.elm;
-          // 老节点的父元素, 用于挂载元素
+          // 旧节点的父元素, 用于挂载元素
           var parentElm = nodeOps.parentNode(oldElm);
 
           // create new node
@@ -7024,6 +7069,7 @@
           }
 
           // destroy old node
+          // 删除旧节点
           if (isDef(parentElm)) {
             // 删除老节点
             removeVnodes([oldVnode], 0, 0);
@@ -7956,11 +8002,11 @@
   // it's important to place the event as the first in the array because
   // the whole point is ensuring the v-model callback gets called before
   // user-attached handlers.
-  function normalizeEvents (on) {
+  function normalizeEvents(on) {
     /* istanbul ignore if */
     if (isDef(on[RANGE_TOKEN])) {
       // IE input[type=range] only supports `change` event
-      var event = isIE ? 'change' : 'input';
+      var event = isIE ? "change" : "input";
       on[event] = [].concat(on[RANGE_TOKEN], on[event] || []);
       delete on[RANGE_TOKEN];
     }
@@ -7975,14 +8021,14 @@
 
   var target$1;
 
-  function createOnceHandler$1 (event, handler, capture) {
+  function createOnceHandler$1(event, handler, capture) {
     var _target = target$1; // save current target element in closure
-    return function onceHandler () {
+    return function onceHandler() {
       var res = handler.apply(null, arguments);
       if (res !== null) {
         remove$2(event, onceHandler, capture, _target);
       }
-    }
+    };
   }
 
   // #9446: Firefox <= 53 (in particular, ESR 52) has incorrect Event.timeStamp
@@ -7990,7 +8036,7 @@
   // safe to exclude.
   var useMicrotaskFix = isUsingMicroTask && !(isFF && Number(isFF[1]) <= 53);
 
-  function add$1 (
+  function add$1(
     name,
     handler,
     capture,
@@ -8012,6 +8058,8 @@
           // certain weird environments...
           e.target === e.currentTarget ||
           // event is fired after handler attachment
+          // 如果是旧事件冒泡触发的, 它的 e.timeStamp，也就是旧事件触发的时间，肯定是小于 attachedTimestamp
+          // timeStamp: 事件触发的时间
           e.timeStamp >= attachedTimestamp ||
           // bail for environments that have buggy event.timeStamp implementations
           // #9462 iOS 9 bug: event.timeStamp is 0 after history.pushState
@@ -8022,20 +8070,18 @@
           // starting reference
           e.target.ownerDocument !== document
         ) {
-          return original.apply(this, arguments)
+          return original.apply(this, arguments);
         }
       };
     }
     target$1.addEventListener(
       name,
       handler,
-      supportsPassive
-        ? { capture: capture, passive: passive }
-        : capture
+      supportsPassive ? { capture: capture, passive: passive } : capture
     );
   }
 
-  function remove$2 (
+  function remove$2(
     name,
     handler,
     capture,
@@ -8048,9 +8094,9 @@
     );
   }
 
-  function updateDOMListeners (oldVnode, vnode) {
+  function updateDOMListeners(oldVnode, vnode) {
     if (isUndef(oldVnode.data.on) && isUndef(vnode.data.on)) {
-      return
+      return;
     }
     var on = vnode.data.on || {};
     var oldOn = oldVnode.data.on || {};
@@ -8065,7 +8111,7 @@
   var events = {
     create: updateDOMListeners,
     update: updateDOMListeners,
-    destroy: function (vnode) { return updateDOMListeners(vnode, emptyNode); }
+    destroy: function (vnode) { return updateDOMListeners(vnode, emptyNode); },
   };
 
   /*  */
@@ -10134,7 +10180,7 @@
     options
   ) {
     warn$2 = options.warn || baseWarn;
-    // 1. 解析 options
+    // 1.解析 options
     platformIsPreTag = options.isPreTag || no;
     platformMustUseProp = options.mustUseProp || no;
     platformGetTagNamespace = options.getTagNamespace || no;
@@ -10259,7 +10305,7 @@
         );
       }
     }
-    // 2. 解析模版
+    // 2.解析模版
     parseHTML(template, {
       warn: warn$2,
       expectHTML: options.expectHTML,
@@ -11496,11 +11542,11 @@
 
 
 
-  var CodegenState = function CodegenState (options) {
+  var CodegenState = function CodegenState(options) {
     this.options = options;
     this.warn = options.warn || baseWarn;
-    this.transforms = pluckModuleFunction(options.modules, 'transformCode');
-    this.dataGenFns = pluckModuleFunction(options.modules, 'genData');
+    this.transforms = pluckModuleFunction(options.modules, "transformCode");
+    this.dataGenFns = pluckModuleFunction(options.modules, "genData");
     this.directives = extend(extend({}, baseDirectives), options.directives);
     var isReservedTag = options.isReservedTag || no;
     this.maybeComponent = function (el) { return !!el.component || !isReservedTag(el.tag); };
@@ -11511,36 +11557,40 @@
 
 
 
-  function generate (
+  function generate(
     ast,
     options
   ) {
     var state = new CodegenState(options);
     // fix #11483, Root level <script> tags should not be rendered.
-    var code = ast ? (ast.tag === 'script' ? 'null' : genElement(ast, state)) : '_c("div")';
+    var code = ast
+      ? ast.tag === "script"
+        ? "null"
+        : genElement(ast, state)
+      : '_c("div")';
     return {
       render: ("with(this){return " + code + "}"),
-      staticRenderFns: state.staticRenderFns
-    }
+      staticRenderFns: state.staticRenderFns,
+    };
   }
 
-  function genElement (el, state) {
+  function genElement(el, state) {
     if (el.parent) {
       el.pre = el.pre || el.parent.pre;
     }
 
     if (el.staticRoot && !el.staticProcessed) {
-      return genStatic(el, state)
+      return genStatic(el, state);
     } else if (el.once && !el.onceProcessed) {
-      return genOnce(el, state)
+      return genOnce(el, state);
     } else if (el.for && !el.forProcessed) {
-      return genFor(el, state)
+      return genFor(el, state);
     } else if (el.if && !el.ifProcessed) {
-      return genIf(el, state)
-    } else if (el.tag === 'template' && !el.slotTarget && !state.pre) {
-      return genChildren(el, state) || 'void 0'
-    } else if (el.tag === 'slot') {
-      return genSlot(el, state)
+      return genIf(el, state);
+    } else if (el.tag === "template" && !el.slotTarget && !state.pre) {
+      return genChildren(el, state) || "void 0";
+    } else if (el.tag === "slot") {
+      return genSlot(el, state);
     } else {
       // component or element
       var code;
@@ -11553,18 +11603,18 @@
         }
 
         var children = el.inlineTemplate ? null : genChildren(el, state, true);
-        code = "_c('" + (el.tag) + "'" + (data ? ("," + data) : '') + (children ? ("," + children) : '') + ")";
+        code = "_c('" + (el.tag) + "'" + (data ? ("," + data) : "") + (children ? ("," + children) : "") + ")";
       }
       // module transforms
       for (var i = 0; i < state.transforms.length; i++) {
         code = state.transforms[i](el, code);
       }
-      return code
+      return code;
     }
   }
 
   // hoist static sub-trees out
-  function genStatic (el, state) {
+  function genStatic(el, state) {
     el.staticProcessed = true;
     // Some elements (templates) need to behave differently inside of a v-pre
     // node.  All pre nodes are static roots, so we can use this as a location to
@@ -11575,75 +11625,77 @@
     }
     state.staticRenderFns.push(("with(this){return " + (genElement(el, state)) + "}"));
     state.pre = originalPreState;
-    return ("_m(" + (state.staticRenderFns.length - 1) + (el.staticInFor ? ',true' : '') + ")")
+    return ("_m(" + (state.staticRenderFns.length - 1) + (el.staticInFor ? ",true" : "") + ")");
   }
 
   // v-once
-  function genOnce (el, state) {
+  function genOnce(el, state) {
     el.onceProcessed = true;
     if (el.if && !el.ifProcessed) {
-      return genIf(el, state)
+      return genIf(el, state);
     } else if (el.staticInFor) {
-      var key = '';
+      var key = "";
       var parent = el.parent;
       while (parent) {
         if (parent.for) {
           key = parent.key;
-          break
+          break;
         }
         parent = parent.parent;
       }
       if (!key) {
         state.warn(
-          "v-once can only be used inside v-for that is keyed. ",
-          el.rawAttrsMap['v-once']
-        );
-        return genElement(el, state)
+            "v-once can only be used inside v-for that is keyed. ",
+            el.rawAttrsMap["v-once"]
+          );
+        return genElement(el, state);
       }
-      return ("_o(" + (genElement(el, state)) + "," + (state.onceId++) + "," + key + ")")
+      return ("_o(" + (genElement(el, state)) + "," + (state.onceId++) + "," + key + ")");
     } else {
-      return genStatic(el, state)
+      return genStatic(el, state);
     }
   }
 
-  function genIf (
+  function genIf(
     el,
     state,
     altGen,
     altEmpty
   ) {
     el.ifProcessed = true; // avoid recursion
-    return genIfConditions(el.ifConditions.slice(), state, altGen, altEmpty)
+    return genIfConditions(el.ifConditions.slice(), state, altGen, altEmpty);
   }
 
-  function genIfConditions (
+  function genIfConditions(
     conditions,
     state,
     altGen,
     altEmpty
   ) {
     if (!conditions.length) {
-      return altEmpty || '_e()'
+      return altEmpty || "_e()";
     }
 
     var condition = conditions.shift();
     if (condition.exp) {
-      return ("(" + (condition.exp) + ")?" + (genTernaryExp(condition.block)) + ":" + (genIfConditions(conditions, state, altGen, altEmpty)))
+      return ("(" + (condition.exp) + ")?" + (genTernaryExp(
+        condition.block
+      )) + ":" + (genIfConditions(conditions, state, altGen, altEmpty)));
     } else {
-      return ("" + (genTernaryExp(condition.block)))
+      return ("" + (genTernaryExp(condition.block)));
     }
 
     // v-if with v-once should generate code like (a)?_m(0):_m(1)
-    function genTernaryExp (el) {
+    function genTernaryExp(el) {
       return altGen
         ? altGen(el, state)
         : el.once
-          ? genOnce(el, state)
-          : genElement(el, state)
+        ? genOnce(el, state)
+        : genElement(el, state);
     }
   }
 
-  function genFor (
+  function genFor(
     el,
     state,
     altGen,
@@ -11651,37 +11703,40 @@
   ) {
     var exp = el.for;
     var alias = el.alias;
-    var iterator1 = el.iterator1 ? ("," + (el.iterator1)) : '';
-    var iterator2 = el.iterator2 ? ("," + (el.iterator2)) : '';
+    var iterator1 = el.iterator1 ? ("," + (el.iterator1)) : "";
+    var iterator2 = el.iterator2 ? ("," + (el.iterator2)) : "";
 
-    if (state.maybeComponent(el) &&
-      el.tag !== 'slot' &&
-      el.tag !== 'template' &&
+    if (
+      state.maybeComponent(el) &&
+      el.tag !== "slot" &&
+      el.tag !== "template" &&
       !el.key
     ) {
       state.warn(
         "<" + (el.tag) + " v-for=\"" + alias + " in " + exp + "\">: component lists rendered with " +
-        "v-for should have explicit keys. " +
-        "See https://vuejs.org/guide/list.html#key for more info.",
-        el.rawAttrsMap['v-for'],
+          "v-for should have explicit keys. " +
+          "See https://vuejs.org/guide/list.html#key for more info.",
+        el.rawAttrsMap["v-for"],
         true /* tip */
       );
     }
 
     el.forProcessed = true; // avoid recursion
-    return (altHelper || '_l') + "((" + exp + ")," +
+    return (
+      (altHelper || "_l") + "((" + exp + ")," +
       "function(" + alias + iterator1 + iterator2 + "){" +
-        "return " + ((altGen || genElement)(el, state)) +
-      '})'
+      "return " + ((altGen || genElement)(el, state)) +
+      "})"
+    );
   }
 
-  function genData$2 (el, state) {
-    var data = '{';
+  function genData$2(el, state) {
+    var data = "{";
 
     // directives first.
     // directives may mutate the el's other properties before they are generated.
     var dirs = genDirectives(el, state);
-    if (dirs) { data += dirs + ','; }
+    if (dirs) { data += dirs + ","; }
 
     // key
     if (el.key) {
@@ -11741,7 +11796,7 @@
         data += inlineTemplate + ",";
       }
     }
-    data = data.replace(/,$/, '') + '}';
+    data = data.replace(/,$/, "") + "}";
     // v-bind dynamic argument wrap
     // v-bind with dynamic arguments must be applied using the same v-bind object
     // merge helper so that class/style/mustUseProp attrs are handled correctly.
@@ -11756,13 +11811,13 @@
     if (el.wrapListeners) {
       data = el.wrapListeners(data);
     }
-    return data
+    return data;
   }
 
-  function genDirectives (el, state) {
+  function genDirectives(el, state) {
     var dirs = el.directives;
-    if (!dirs) { return }
-    var res = 'directives:[';
+    if (!dirs) { return; }
+    var res = "directives:[";
     var hasRuntime = false;
     var i, l, dir, needRuntime;
     for (i = 0, l = dirs.length; i < l; i++) {
@@ -11776,29 +11831,35 @@
       }
       if (needRuntime) {
         hasRuntime = true;
-        res += "{name:\"" + (dir.name) + "\",rawName:\"" + (dir.rawName) + "\"" + (dir.value ? (",value:(" + (dir.value) + "),expression:" + (JSON.stringify(dir.value))) : '') + (dir.arg ? (",arg:" + (dir.isDynamicArg ? dir.arg : ("\"" + (dir.arg) + "\""))) : '') + (dir.modifiers ? (",modifiers:" + (JSON.stringify(dir.modifiers))) : '') + "},";
+        res += "{name:\"" + (dir.name) + "\",rawName:\"" + (dir.rawName) + "\"" + (dir.value
+            ? (",value:(" + (dir.value) + "),expression:" + (JSON.stringify(dir.value)))
+            : "") + (dir.arg ? (",arg:" + (dir.isDynamicArg ? dir.arg : ("\"" + (dir.arg) + "\""))) : "") + (dir.modifiers ? (",modifiers:" + (JSON.stringify(dir.modifiers))) : "") + "},";
       }
     }
     if (hasRuntime) {
-      return res.slice(0, -1) + ']'
+      return res.slice(0, -1) + "]";
     }
   }
 
-  function genInlineTemplate (el, state) {
+  function genInlineTemplate(el, state) {
     var ast = el.children[0];
-    if (el.children.length !== 1 || ast.type !== 1) {
+    if (
+      el.children.length !== 1 || ast.type !== 1
+    ) {
       state.warn(
-        'Inline-template components must have exactly one child element.',
+        "Inline-template components must have exactly one child element.",
         { start: el.start }
       );
     }
     if (ast && ast.type === 1) {
       var inlineRenderFns = generate(ast, state.options);
-      return ("inlineTemplate:{render:function(){" + (inlineRenderFns.render) + "},staticRenderFns:[" + (inlineRenderFns.staticRenderFns.map(function (code) { return ("function(){" + code + "}"); }).join(',')) + "]}")
+      return ("inlineTemplate:{render:function(){" + (inlineRenderFns.render) + "},staticRenderFns:[" + (inlineRenderFns.staticRenderFns
+        .map(function (code) { return ("function(){" + code + "}"); })
+        .join(",")) + "]}");
     }
   }
 
-  function genScopedSlots (
+  function genScopedSlots(
     el,
     slots,
     state
@@ -11807,15 +11868,14 @@
     // components with only scoped slots to skip forced updates from parent.
     // but in some cases we have to bail-out of this optimization
     // for example if the slot contains dynamic names, has v-if or v-for on them...
-    var needsForceUpdate = el.for || Object.keys(slots).some(function (key) {
-      var slot = slots[key];
-      return (
-        slot.slotTargetDynamic ||
-        slot.if ||
-        slot.for ||
-        containsSlotChild(slot) // is passing down slot from parent which may be dynamic
-      )
-    });
+    var needsForceUpdate =
+      el.for ||
+      Object.keys(slots).some(function (key) {
+        var slot = slots[key];
+        return (
+          slot.slotTargetDynamic || slot.if || slot.for || containsSlotChild(slot) // is passing down slot from parent which may be dynamic
+        );
+      });
 
     // #9534: if a component with scoped slots is inside a conditional branch,
     // it's possible for the same component to be reused but with different
@@ -11836,7 +11896,7 @@
           parent.for
         ) {
           needsForceUpdate = true;
-          break
+          break;
         }
         if (parent.if) {
           needsKey = true;
@@ -11847,56 +11907,53 @@
 
     var generatedSlots = Object.keys(slots)
       .map(function (key) { return genScopedSlot(slots[key], state); })
-      .join(',');
+      .join(",");
 
-    return ("scopedSlots:_u([" + generatedSlots + "]" + (needsForceUpdate ? ",null,true" : "") + (!needsForceUpdate && needsKey ? (",null,false," + (hash(generatedSlots))) : "") + ")")
+    return ("scopedSlots:_u([" + generatedSlots + "]" + (needsForceUpdate ? ",null,true" : "") + (!needsForceUpdate && needsKey ? (",null,false," + (hash(generatedSlots))) : "") + ")");
   }
 
   function hash(str) {
     var hash = 5381;
     var i = str.length;
-    while(i) {
+    while (i) {
       hash = (hash * 33) ^ str.charCodeAt(--i);
     }
-    return hash >>> 0
+    return hash >>> 0;
   }
 
-  function containsSlotChild (el) {
+  function containsSlotChild(el) {
     if (el.type === 1) {
-      if (el.tag === 'slot') {
-        return true
+      if (el.tag === "slot") {
+        return true;
       }
-      return el.children.some(containsSlotChild)
+      return el.children.some(containsSlotChild);
     }
-    return false
+    return false;
   }
 
-  function genScopedSlot (
-    el,
-    state
-  ) {
-    var isLegacySyntax = el.attrsMap['slot-scope'];
+  function genScopedSlot(el, state) {
+    var isLegacySyntax = el.attrsMap["slot-scope"];
     if (el.if && !el.ifProcessed && !isLegacySyntax) {
-      return genIf(el, state, genScopedSlot, "null")
+      return genIf(el, state, genScopedSlot, "null");
     }
     if (el.for && !el.forProcessed) {
-      return genFor(el, state, genScopedSlot)
+      return genFor(el, state, genScopedSlot);
     }
-    var slotScope = el.slotScope === emptySlotScopeToken
-      ? ""
-      : String(el.slotScope);
-    var fn = "function(" + slotScope + "){" +
-      "return " + (el.tag === 'template'
-        ? el.if && isLegacySyntax
-          ? ("(" + (el.if) + ")?" + (genChildren(el, state) || 'undefined') + ":undefined")
-          : genChildren(el, state) || 'undefined'
-        : genElement(el, state)) + "}";
+    var slotScope =
+      el.slotScope === emptySlotScopeToken ? "" : String(el.slotScope);
+    var fn =
+      "function(" + slotScope + "){" +
+      "return " + (el.tag === "template"
+          ? el.if && isLegacySyntax
+            ? ("(" + (el.if) + ")?" + (genChildren(el, state) || "undefined") + ":undefined")
+            : genChildren(el, state) || "undefined"
+          : genElement(el, state)) + "}";
     // reverse proxy v-slot without scope on this.$slots
     var reverseProxy = slotScope ? "" : ",proxy:true";
-    return ("{key:" + (el.slotTarget || "\"default\"") + ",fn:" + fn + reverseProxy + "}")
+    return ("{key:" + (el.slotTarget || "\"default\"") + ",fn:" + fn + reverseProxy + "}");
   }
 
-  function genChildren (
+  function genChildren(
     el,
     state,
     checkSkip,
@@ -11907,21 +11964,24 @@
     if (children.length) {
       var el$1 = children[0];
       // optimize single v-for
-      if (children.length === 1 &&
+      if (
+        children.length === 1 &&
         el$1.for &&
-        el$1.tag !== 'template' &&
-        el$1.tag !== 'slot'
+        el$1.tag !== "template" &&
+        el$1.tag !== "slot"
       ) {
         var normalizationType = checkSkip
-          ? state.maybeComponent(el$1) ? ",1" : ",0"
+          ? state.maybeComponent(el$1)
+            ? ",1"
+            : ",0"
           : "";
-        return ("" + ((altGenElement || genElement)(el$1, state)) + normalizationType)
+        return ("" + ((altGenElement || genElement)(el$1, state)) + normalizationType);
       }
       var normalizationType$1 = checkSkip
         ? getNormalizationType(children, state.maybeComponent)
         : 0;
       var gen = altGenNode || genNode;
-      return ("[" + (children.map(function (c) { return gen(c, state); }).join(',')) + "]" + (normalizationType$1 ? ("," + normalizationType$1) : ''))
+      return ("[" + (children.map(function (c) { return gen(c, state); }).join(",")) + "]" + (normalizationType$1 ? ("," + normalizationType$1) : ""));
     }
   }
 
@@ -11929,7 +11989,7 @@
   // 0: no normalization needed
   // 1: simple normalization needed (possible 1-level deep nested array)
   // 2: full normalization needed
-  function getNormalizationType (
+  function getNormalizationType(
     children,
     maybeComponent
   ) {
@@ -11937,58 +11997,66 @@
     for (var i = 0; i < children.length; i++) {
       var el = children[i];
       if (el.type !== 1) {
-        continue
+        continue;
       }
-      if (needsNormalization(el) ||
-          (el.ifConditions && el.ifConditions.some(function (c) { return needsNormalization(c.block); }))) {
+      if (
+        needsNormalization(el) ||
+        (el.ifConditions &&
+          el.ifConditions.some(function (c) { return needsNormalization(c.block); }))
+      ) {
         res = 2;
-        break
+        break;
       }
-      if (maybeComponent(el) ||
-          (el.ifConditions && el.ifConditions.some(function (c) { return maybeComponent(c.block); }))) {
+      if (
+        maybeComponent(el) ||
+        (el.ifConditions && el.ifConditions.some(function (c) { return maybeComponent(c.block); }))
+      ) {
         res = 1;
       }
     }
-    return res
+    return res;
   }
 
-  function needsNormalization (el) {
-    return el.for !== undefined || el.tag === 'template' || el.tag === 'slot'
+  function needsNormalization(el) {
+    return el.for !== undefined || el.tag === "template" || el.tag === "slot";
   }
 
-  function genNode (node, state) {
+  function genNode(node, state) {
     if (node.type === 1) {
-      return genElement(node, state)
+      return genElement(node, state);
     } else if (node.type === 3 && node.isComment) {
-      return genComment(node)
+      return genComment(node);
     } else {
-      return genText(node)
+      return genText(node);
     }
   }
 
-  function genText (text) {
+  function genText(text) {
     return ("_v(" + (text.type === 2
-      ? text.expression // no need for () because already wrapped in _s()
-      : transformSpecialNewlines(JSON.stringify(text.text))) + ")")
+        ? text.expression // no need for () because already wrapped in _s()
+        : transformSpecialNewlines(JSON.stringify(text.text))) + ")");
   }
 
-  function genComment (comment) {
-    return ("_e(" + (JSON.stringify(comment.text)) + ")")
+  function genComment(comment) {
+    return ("_e(" + (JSON.stringify(comment.text)) + ")");
   }
 
-  function genSlot (el, state) {
+  function genSlot(el, state) {
     var slotName = el.slotName || '"default"';
     var children = genChildren(el, state);
-    var res = "_t(" + slotName + (children ? (",function(){return " + children + "}") : '');
-    var attrs = el.attrs || el.dynamicAttrs
-      ? genProps((el.attrs || []).concat(el.dynamicAttrs || []).map(function (attr) { return ({
-          // slot props are camelized
-          name: camelize(attr.name),
-          value: attr.value,
-          dynamic: attr.dynamic
-        }); }))
-      : null;
-    var bind$$1 = el.attrsMap['v-bind'];
+    var res = "_t(" + slotName + (children ? (",function(){return " + children + "}") : "");
+    var attrs =
+      el.attrs || el.dynamicAttrs
+        ? genProps(
+            (el.attrs || []).concat(el.dynamicAttrs || []).map(function (attr) { return ({
+              // slot props are camelized
+              name: camelize(attr.name),
+              value: attr.value,
+              dynamic: attr.dynamic,
+            }); })
+          )
+        : null;
+    var bind$$1 = el.attrsMap["v-bind"];
     if ((attrs || bind$$1) && !children) {
       res += ",null";
     }
@@ -11996,22 +12064,22 @@
       res += "," + attrs;
     }
     if (bind$$1) {
-      res += (attrs ? '' : ',null') + "," + bind$$1;
+      res += (attrs ? "" : ",null") + "," + bind$$1;
     }
-    return res + ')'
+    return res + ")";
   }
 
   // componentName is el.component, take it as argument to shun flow's pessimistic refinement
-  function genComponent (
+  function genComponent(
     componentName,
     el,
     state
   ) {
     var children = el.inlineTemplate ? null : genChildren(el, state, true);
-    return ("_c(" + componentName + "," + (genData$2(el, state)) + (children ? ("," + children) : '') + ")")
+    return ("_c(" + componentName + "," + (genData$2(el, state)) + (children ? ("," + children) : "") + ")");
   }
 
-  function genProps (props) {
+  function genProps(props) {
     var staticProps = "";
     var dynamicProps = "";
     for (var i = 0; i < props.length; i++) {
@@ -12025,17 +12093,15 @@
     }
     staticProps = "{" + (staticProps.slice(0, -1)) + "}";
     if (dynamicProps) {
-      return ("_d(" + staticProps + ",[" + (dynamicProps.slice(0, -1)) + "])")
+      return ("_d(" + staticProps + ",[" + (dynamicProps.slice(0, -1)) + "])");
     } else {
-      return staticProps
+      return staticProps;
     }
   }
 
   // #3895, #4268
-  function transformSpecialNewlines (text) {
-    return text
-      .replace(/\u2028/g, '\\u2028')
-      .replace(/\u2029/g, '\\u2029')
+  function transformSpecialNewlines(text) {
+    return text.replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
   }
 
   /*  */
