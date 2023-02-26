@@ -73,6 +73,7 @@ export default {
     cacheVNode() {
       const { cache, keys, vnodeToCache, keyToCache } = this;
       if (vnodeToCache) {
+        // 缓存 vnode
         const { tag, componentInstance, componentOptions } = vnodeToCache;
         cache[keyToCache] = {
           name: getComponentName(componentOptions),
@@ -116,6 +117,7 @@ export default {
 
   render() {
     const slot = this.$slots.default;
+    // 获取 slot 的第一个组件节点
     const vnode: VNode = getFirstComponentChild(slot);
     const componentOptions: ?VNodeComponentOptions =
       vnode && vnode.componentOptions;
@@ -123,7 +125,7 @@ export default {
       // check pattern
       const name: ?string = getComponentName(componentOptions);
       const { include, exclude } = this;
-      // 没有被配置缓存
+      // 没有被配置缓存, 直接返回组件 vnode
       if (
         // not included
         (include && (!name || !matches(include, name))) ||
@@ -133,7 +135,7 @@ export default {
         return vnode;
       }
 
-      // 从缓存获取 vnode
+      // 管理缓存的 vnode
       const { cache, keys } = this;
       const key: ?string =
         vnode.key == null
@@ -144,10 +146,13 @@ export default {
           : vnode.key;
       if (cache[key]) {
         vnode.componentInstance = cache[key].componentInstance;
+        // 删除旧的 vnode
         // make current key freshest
         remove(keys, key);
+        // 将 key 添加到 keys 中
         keys.push(key);
       } else {
+        // 等待挂载/更新后将 vnode 缓存
         // delay setting the cache until update
         this.vnodeToCache = vnode;
         this.keyToCache = key;
